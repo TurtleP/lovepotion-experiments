@@ -5,6 +5,7 @@
 
 #include "modules/event/wrap_Event.hpp"
 #include "modules/filesystem/wrap_Filesystem.hpp"
+#include "modules/timer/wrap_Timer.hpp"
 
 static constexpr char arg_lua[] = {
 #include "scripts/arg.lua"
@@ -33,6 +34,7 @@ static constexpr char nestlink_lua[] = {
 // clang-format off
 static constexpr luaL_Reg modules[] =
 {
+    { "love.timer",      Wrap_Timer::open      },
     { "love.event",      Wrap_Event::open      },
     { "love.filesystem", Wrap_Filesystem::open },
     #if defined(__DEBUG__)

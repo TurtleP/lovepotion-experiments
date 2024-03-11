@@ -70,6 +70,7 @@ function love.boot()
     local can_has_game = pcall(love.filesystem.setSource, exepath)
 
     -- It's a fused game, don't parse --game argument
+    TRACE("can_has_game: %s", tostring(can_has_game))
     if can_has_game then
         love.arg.options.game.set = true
     end
@@ -174,10 +175,10 @@ function love.init()
         },
         modules = {
             data = false,
-            event = false,
+            event = true,
             keyboard = false,
             mouse = false,
-            timer = false,
+            timer = true,
             joystick = false,
             touch = false,
             image = false,
@@ -402,8 +403,8 @@ function love.init()
     if no_game_code then
         local opts = love.arg.options
         local gamepath = opts.game.set and opts.game.arg[1] or ""
-        local gamestr = gamepath == "" and "" or " at "..gamepath
-        error("No code to run".. gamestr .."\nYour game might be packaged incorrectly.\nMake sure " ..main_file.. " is at the top level of the zip or folder.")
+        local gamestr = gamepath == "" and "" or " at ".. gamepath
+        error("No code to run" .. gamestr .. "\nYour game might be packaged incorrectly.\nMake sure " .. main_file.. " is at the top level of the zip or folder.")
     elseif invalid_game_path then
         error("Cannot load game at path '" .. invalid_game_path .. "'.\nMake sure a folder exists at the specified path.")
     end

@@ -101,7 +101,7 @@ namespace love
             if (!this->getRealPathType(path, type))
                 return type == FILETYPE_DIRECTORY;
 
-            return std::filesystem::create_directory(path);
+            return std::filesystem::create_directories(path);
         }
 
         std::string getExecutablePath() const

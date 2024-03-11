@@ -7,4 +7,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_sources(${PROJECT_NAME} PRIVATE
 source/boot.cpp
 source/driver/EventQueue.cpp
+source/modules/timer/Timer.cpp
 )

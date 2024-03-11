@@ -35,7 +35,7 @@ int Wrap_Filesystem::init(lua_State* L)
 
 int Wrap_Filesystem::setFused(lua_State* L)
 {
-    bool fused = luax_checkboolean(L, 1);
+    bool fused = luax_toboolean(L, 1);
     instance()->setFused(fused);
 
     return 0;
@@ -43,7 +43,7 @@ int Wrap_Filesystem::setFused(lua_State* L)
 
 int Wrap_Filesystem::isFused(lua_State* L)
 {
-    lua_pushboolean(L, instance()->isFused());
+    luax_pushboolean(L, instance()->isFused());
 
     return 1;
 }
@@ -258,9 +258,10 @@ int Wrap_Filesystem::load(lua_State* L)
             return 1;
     }
 }
-
+#include "utility/logfile.hpp"
 int Wrap_Filesystem::getWorkingDirectory(lua_State* L)
 {
+    LOG("%s", instance()->getWorkingDirectory().c_str());
     luax_pushstring(L, instance()->getWorkingDirectory());
 
     return 1;

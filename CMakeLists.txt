@@ -134,5 +134,6 @@ source/modules/filesystem/FileData.cpp
 source/modules/filesystem/physfs/File.cpp
 source/modules/filesystem/physfs/Filesystem.cpp
 source/modules/filesystem/wrap_Filesystem.cpp
+source/modules/timer/wrap_Timer.cpp
 source/modules/love/love.cpp
 )

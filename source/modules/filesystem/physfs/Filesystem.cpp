@@ -31,9 +31,6 @@ static std::string getApplicationPath(std::string origin)
         }
     }
 
-    if (!love::Console::is(love::Console::CAFE))
-        return origin;
-
 #if defined(__WIIU__)
     OSDynLoad_Module module;
     const auto success = 0;
@@ -55,8 +52,12 @@ static std::string getApplicationPath(std::string origin)
         // clang-format on
     }
     return std::string {};
+#else
+    return origin;
 #endif
 }
+
+#include <utility/logfile.hpp>
 
 namespace love
 {
@@ -105,14 +106,15 @@ namespace love
 
     void Filesystem::init(const char* arg0)
     {
+        LOG("%s", arg0);
         this->executablePath = getApplicationPath(arg0);
 
         if (this->executablePath.empty())
             throw love::Exception("Error getting application path.");
-
+        LOG("Executable path: %s", this->executablePath.c_str());
         if (!PHYSFS_init(this->executablePath.c_str()))
             throw love::Exception("Error initializing PhysFS: {:s}", Filesystem::getLastError());
-
+        LOG("PhysFS initialized.");
         PHYSFS_setWriteDir(nullptr);
         this->setSymlinksEnabled(true);
     }
@@ -214,16 +216,16 @@ namespace love
 
     bool Filesystem::setSource(const char* source)
     {
+        LOG("Setting source: %s", source);
         if (!PHYSFS_isInit())
             return false;
-
         if (!this->source.empty())
             return false;
 
         std::string searchPath(source);
         if (!PHYSFS_mount(searchPath.c_str(), nullptr, 1))
             return false;
-
+        LOG("Source set.");
         this->source = source;
 
         return true;
@@ -421,19 +423,14 @@ namespace love
 
     std::string Filesystem::getWorkingDirectory()
     {
-        if (this->currentDirectory.empty())
-        {
-            char* cwdInfo = new char[PATH_MAX];
+        if (!this->currentDirectory.empty())
+            return this->currentDirectory;
 
-            if (getcwd(cwdInfo, PATH_MAX))
-                this->currentDirectory = cwdInfo;
+        this->currentDirectory = std::filesystem::current_path().string();
 
-            delete[] cwdInfo;
-
-            if (Console::is(Console::CAFE))
-                this->currentDirectory = parentize(getApplicationPath(""));
-        }
-
+        if (Console::is(Console::CAFE))
+            this->currentDirectory = parentize(getApplicationPath(""));
+        LOG("Current directory: %s", this->currentDirectory.c_str());
         return this->currentDirectory;
     }
 

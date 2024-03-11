@@ -3,6 +3,8 @@
 #include <3ds.h>
 #include <stdlib.h>
 
+#include "utility/logfile.hpp"
+
 namespace love
 {
     void preInit()

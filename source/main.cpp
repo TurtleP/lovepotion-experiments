@@ -19,7 +19,7 @@ enum DoneAction
     DONE_RESTART
 };
 
-static DoneAction runLove(std::vector<const char*>& args, int& result, love::Variant& restartValue)
+static DoneAction runLove(char** argv, int argc, int& result, love::Variant& restartValue)
 {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
@@ -30,11 +30,19 @@ static DoneAction runLove(std::vector<const char*>& args, int& result, love::Var
     {
         lua_newtable(L);
 
-        if (args.size() > 0)
+        if (argc > 0)
         {
-            lua_pushstring(L, args[0]);
+            lua_pushstring(L, argv[0]);
             lua_rawseti(L, -2, -2);
         }
+
+        // on 3DS and Switch, argv[0] is the binary path
+        // on Wii U, argv[0] is.. something else
+        // args[-1] is "embedded boot.lua"
+        // args[1] is "game" for the game folder
+        // this should allow "game" to be used in love.filesystem.setSource
+        std::vector<const char*> args(argv, argv + argc);
+        args.push_back("game");
 
         lua_pushstring(L, "embedded boot.lua");
         lua_rawseti(L, -2, -1);
@@ -48,7 +56,9 @@ static DoneAction runLove(std::vector<const char*>& args, int& result, love::Var
         lua_setglobal(L, "arg");
     }
 
-    love::luax_require(L, "love");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "love");
+    lua_call(L, 1, 1); // leave the returned table on the stack.
 
     {
         lua_pushboolean(L, 1);
@@ -61,7 +71,9 @@ static DoneAction runLove(std::vector<const char*>& args, int& result, love::Var
 
     lua_pop(L, 1);
 
-    love::luax_require(L, "love.boot");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "love.boot");
+    lua_call(L, 1, 1);
 
     lua_newthread(L);
     lua_pushvalue(L, -2);
@@ -101,13 +113,9 @@ int main(int argc, char** argv)
     DoneAction action = DONE_QUIT;
     love::Variant restartValue;
 
-    // "'lovepotion_path' 'embedded boot.lua' 'game'"
-    std::vector<const char*> args(argv, argv + argc);
-    args.push_back("game");
-
     do
     {
-        action = runLove(args, result, restartValue);
+        action = runLove(argv, argc, result, restartValue);
     } while (action != DONE_QUIT);
 
     return result;
