@@ -109,6 +109,14 @@ namespace love
             return this->executablePath;
         }
 
+        FileData* newFileData(const void* data, size_t size, std::string_view filename) const
+        {
+            FileData* fileData = new FileData(size, filename);
+            std::copy_n((const void*)data, size, fileData->getData());
+
+            return fileData;
+        }
+
         // clang-format off
         STRINGMAP_DECLARE(fileTypes, FileType,
             { "file",      FILETYPE_FILE      },

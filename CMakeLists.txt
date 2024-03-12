@@ -35,10 +35,11 @@ endif()
 
 set(COMPILE_OPTIMIZATION -O2)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(COMPILE_OPTIMIZATION -O0)
+    set(COMPILE_OPTIMIZATION -Og)
 endif()
 
-message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}/${COMPILE_OPTIMIZATION}")
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+message(STATUS "COMPILE_OPTIMIZATION: ${COMPILE_OPTIMIZATION}")
 
 target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall -Wno-psabi -Wextra -Wconversion
@@ -128,12 +129,17 @@ source/common/types.cpp
 source/common/Variant.cpp
 source/main.cpp
 source/modules/data/ByteData.cpp
+source/modules/data/DataView.cpp
+source/modules/data/wrap_Data.cpp
+source/modules/data/wrap_DataModule.cpp
 source/modules/event/Event.cpp
 source/modules/event/wrap_Event.cpp
 source/modules/filesystem/FileData.cpp
 source/modules/filesystem/physfs/File.cpp
 source/modules/filesystem/physfs/Filesystem.cpp
+source/modules/filesystem/wrap_File.cpp
+source/modules/filesystem/wrap_FileData.cpp
 source/modules/filesystem/wrap_Filesystem.cpp
-source/modules/timer/wrap_Timer.cpp
 source/modules/love/love.cpp
+source/modules/timer/wrap_Timer.cpp
 )

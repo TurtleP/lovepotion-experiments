@@ -68,17 +68,17 @@ namespace love
         return size > max ? max : (size_t)size;
     }
 
-    std::string_view FileData::getFilename() const
+    const std::string& FileData::getFilename() const
     {
         return this->filename;
     }
 
-    std::string_view FileData::getExtension() const
+    const std::string& FileData::getExtension() const
     {
         return this->extension;
     }
 
-    std::string_view FileData::getName() const
+    const std::string& FileData::getName() const
     {
         return this->name;
     }

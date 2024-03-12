@@ -14,7 +14,7 @@ namespace love
         return fs != nullptr && fs->setupWriteDirectory();
     }
 
-    File::File(const std::string& filename, Mode mode) : FileBase(filename), file(nullptr)
+    File::File(std::string_view filename, Mode mode) : FileBase(filename), file(nullptr)
     {
         if (!this->open(mode))
             throw love::Exception(E_COULD_NOT_OPEN_FILE, filename);

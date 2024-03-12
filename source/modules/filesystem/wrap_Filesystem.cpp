@@ -1,7 +1,10 @@
 #include "modules/filesystem/wrap_Filesystem.hpp"
+
+#include "modules/data/wrap_Data.hpp"
 #include "modules/filesystem/physfs/Filesystem.hpp"
 
-#include "common/Data.hpp"
+#include "modules/filesystem/wrap_File.hpp"
+#include "modules/filesystem/wrap_FileData.hpp"
 
 using namespace love;
 
@@ -83,9 +86,83 @@ int Wrap_Filesystem::getSource(lua_State* L)
     return 1;
 }
 
-int Wrap_Filesystem::getExecutablePath(lua_State* L)
+int Wrap_Filesystem::mount(lua_State* L)
 {
-    luax_pushstring(L, instance()->getExecutablePath());
+    std::string archive {};
+    if (luax_istype(L, 1, Data::type))
+    {
+        Data* data = luax_checkdata(L, 1);
+        int start  = 2;
+
+        if (luax_istype(L, 1, FileData::type))
+        {
+            FileData* fileData = luax_checkfiledata(L, 1);
+            archive            = fileData->getFilename();
+            start              = 2;
+        }
+    }
+}
+
+int Wrap_Filesystem::mountFullPath(lua_State* L)
+{}
+
+int Wrap_Filesystem::mountCommonPath(lua_State* L)
+{}
+
+int Wrap_Filesystem::unmount(lua_State* L)
+{}
+
+int Wrap_Filesystem::unmountFullPath(lua_State* L)
+{}
+
+int Wrap_Filesystem::unmountCommonPath(lua_State* L)
+{}
+
+int Wrap_Filesystem::openFile(lua_State* L)
+{
+    const char* filename   = luaL_checkstring(L, 1);
+    const char* modeString = luaL_checkstring(L, 2);
+
+    File::Mode mode = File::MODE_CLOSED;
+    if (!File::getConstant(modeString, mode))
+        return luaL_error(L, "Invalid file mode '%s'.", modeString);
+
+    File* file = nullptr;
+    try
+    {
+        file = instance()->openFile(filename, mode);
+    }
+    catch (love::Exception& e)
+    {
+        return luax_ioerror(L, "%s", e.what());
+    }
+
+    luax_pushtype(L, file);
+    file->release();
+
+    return 1;
+}
+
+int Wrap_Filesystem::getFullCommonPath(lua_State* L)
+{}
+
+int Wrap_Filesystem::getWorkingDirectory(lua_State* L)
+{
+    luax_pushstring(L, instance()->getWorkingDirectory());
+
+    return 1;
+}
+
+int Wrap_Filesystem::getUserDirectory(lua_State* L)
+{
+    luax_pushstring(L, instance()->getUserDirectory());
+
+    return 1;
+}
+
+int Wrap_Filesystem::getAppdataDirectory(lua_State* L)
+{
+    luax_pushstring(L, instance()->getAppdataDirectory());
 
     return 1;
 }
@@ -104,19 +181,101 @@ int Wrap_Filesystem::getSourceBaseDirectory(lua_State* L)
     return 1;
 }
 
-int Wrap_Filesystem::getAppdataDirectory(lua_State* L)
+int Wrap_Filesystem::getRealDirectory(lua_State* L)
 {
-    luax_pushstring(L, instance()->getAppdataDirectory());
+    const char* filepath = luaL_checkstring(L, 1);
+    std::string directory {};
+
+    try
+    {
+        directory = instance()->getRealDirectory(filepath);
+    }
+    catch (love::Exception& e)
+    {
+        return luax_ioerror(L, "%s", e.what());
+    }
+
+    luax_pushstring(L, directory);
+    return 1;
+}
+
+int Wrap_Filesystem::getExecutablePath(lua_State* L)
+{
+    luax_pushstring(L, instance()->getExecutablePath());
 
     return 1;
 }
 
-int Wrap_Filesystem::getUserDirectory(lua_State* L)
+int Wrap_Filesystem::createDirectory(lua_State* L)
 {
-    luax_pushstring(L, instance()->getUserDirectory());
+    const char* path = luaL_checkstring(L, 1);
+    luax_pushboolean(L, instance()->createDirectory(path));
 
     return 1;
 }
+
+int Wrap_Filesystem::remove(lua_State* L)
+{
+    const char* path = luaL_checkstring(L, 1);
+    luax_pushboolean(L, instance()->remove(path));
+
+    return 1;
+}
+
+int Wrap_Filesystem::read(lua_State* L)
+{}
+
+static int write_or_append(lua_State* L, File::Mode mode)
+{
+    const char* filename = luaL_checkstring(L, 1);
+
+    const char* input = nullptr;
+    size_t length     = 0;
+
+    if (luax_istype(L, 2, Data::type))
+    {
+        Data* data = luax_totype<Data>(L, 2);
+        input      = (const char*)data->getData();
+        length     = data->getSize();
+    }
+    else if (lua_isstring(L, 2))
+        input = lua_tolstring(L, 2, &length);
+    else
+        return luaL_argerror(L, 2, "string or Data expected");
+
+    length = luaL_optinteger(L, 3, length);
+
+    try
+    {
+        if (mode == File::MODE_APPEND)
+            instance()->append(filename, input, length);
+        else
+            instance()->write(filename, input, length);
+    }
+    catch (love::Exception& e)
+    {
+        return luax_ioerror(L, "%s", e.what());
+    }
+
+    luax_pushboolean(L, true);
+    return 1;
+}
+
+int Wrap_Filesystem::write(lua_State* L)
+{
+    return write_or_append(L, File::MODE_WRITE);
+}
+
+int Wrap_Filesystem::append(lua_State* L)
+{
+    return write_or_append(L, File::MODE_APPEND);
+}
+
+int Wrap_Filesystem::getDirectoryItems(lua_State* L)
+{}
+
+int Wrap_Filesystem::lines(lua_State* L)
+{}
 
 int Wrap_Filesystem::exists(lua_State* L)
 {
@@ -124,6 +283,61 @@ int Wrap_Filesystem::exists(lua_State* L)
     lua_pushboolean(L, instance()->exists(filename));
 
     return 1;
+}
+
+int Wrap_Filesystem::load(lua_State* L)
+{
+    std::string filename      = luaL_checkstring(L, 1);
+    Filesystem::LoadMode mode = Filesystem::LOADMODE_ANY;
+
+    if (!lua_isnoneornil(L, 2))
+    {
+        const char* modestr = luaL_checkstring(L, 2);
+        if (!Filesystem::getConstant(modestr, mode))
+            return luaL_error(L, "Invalid load mode '%s'.", modestr);
+    }
+
+    // TODO: file data
+    Data* data = nullptr;
+
+    try
+    {
+        data = instance()->read(filename.c_str());
+    }
+    catch (love::Exception& e)
+    {
+        return luax_ioerror(L, "%s", e.what());
+    }
+
+    int status = 0;
+#if (LUA_VERSION_NUM > 501) || defined(LUA_JITLIBNAME)
+    const char* modeStr = nullptr;
+    Filesystem::getConstant(mode, modeStr);
+
+    status = luaL_loadbufferx(L, (const char*)data->getData(), data->getSize(), filename.c_str(),
+                              modeStr);
+#else
+    if (mode == Filesystem::LOADMODE_ANY)
+        status =
+            luaL_loadbuffer(L, (const char*)data->getData(), data->getSize(), filename.c_str());
+    else
+    {
+        data->release();
+        return luaL_error(L, "only \"bt\" is supported on this Lua interpreter\n");
+    }
+#endif
+
+    data->release();
+
+    switch (status)
+    {
+        case LUA_ERRMEM:
+            return luaL_error(L, "Memory allocation error: %s", lua_tostring(L, -1));
+        case LUA_ERRSYNTAX:
+            return luaL_error(L, "Syntax error: %s", lua_tostring(L, -1));
+        default:
+            return 1;
+    }
 }
 
 int Wrap_Filesystem::getInfo(lua_State* L)
@@ -186,85 +400,63 @@ int Wrap_Filesystem::getInfo(lua_State* L)
     return 1;
 }
 
-int Wrap_Filesystem::getRealDirectory(lua_State* L)
+int Wrap_Filesystem::setSymlinksEnabled(lua_State* L)
 {
-    const char* filepath = luaL_checkstring(L, 1);
-    std::string directory {};
+    bool enable = luax_toboolean(L, 1);
+    instance()->setSymlinksEnabled(enable);
 
-    try
-    {
-        directory = instance()->getRealDirectory(filepath);
-    }
-    catch (love::Exception& e)
-    {
-        return luax_ioerror(L, "%s", e.what());
-    }
+    return 0;
+}
 
-    luax_pushstring(L, directory);
+int Wrap_Filesystem::areSymlinksEnabled(lua_State* L)
+{
+    luax_pushboolean(L, instance()->areSymlinksEnabled());
+
     return 1;
 }
 
-int Wrap_Filesystem::load(lua_State* L)
+int Wrap_Filesystem::newFileData(lua_State* L)
+{}
+
+int Wrap_Filesystem::getRequirePath(lua_State* L)
 {
-    std::string filename      = luaL_checkstring(L, 1);
-    Filesystem::LoadMode mode = Filesystem::LOADMODE_ANY;
+    std::string path;
+    bool separator = false;
 
-    if (!lua_isnoneornil(L, 2))
+    for (const auto& element : instance()->getRequirePath())
     {
-        const char* modestr = luaL_checkstring(L, 2);
-        if (!Filesystem::getConstant(modestr, mode))
-            return luaL_error(L, "Invalid load mode '%s'.", modestr);
+        if (separator)
+            path += ";";
+        else
+            separator = true;
+
+        path += element;
     }
 
-    // TODO: file data
-    Data* data = nullptr;
-
-    try
-    {
-        data = instance()->read(filename.c_str());
-    }
-    catch (love::Exception& e)
-    {
-        return luax_ioerror(L, "%s", e.what());
-    }
-
-    int status = 0;
-#if (LUA_VERSION_NUM > 501) || defined(LUA_JITLIBNAME)
-    const char* modeStr = nullptr;
-    Filesystem::getConstant(mode, modeStr);
-
-    status = luaL_loadbufferx(L, (const char*)data->getData(), data->getSize(), filename.c_str(),
-                              modeStr);
-#else
-    if (mode == Filesystem::LOADMODE_ANY)
-        status =
-            luaL_loadbuffer(L, (const char*)data->getData(), data->getSize(), filename.c_str());
-    else
-    {
-        data->release();
-        return luaL_error(L, "only \"bt\" is supported on this Lua interpreter\n");
-    }
-#endif
-
-    data->release();
-
-    switch (status)
-    {
-        case LUA_ERRMEM:
-            return luaL_error(L, "Memory allocation error: %s", lua_tostring(L, -1));
-        case LUA_ERRSYNTAX:
-            return luaL_error(L, "Syntax error: %s", lua_tostring(L, -1));
-        default:
-            return 1;
-    }
-}
-#include "utility/logfile.hpp"
-int Wrap_Filesystem::getWorkingDirectory(lua_State* L)
-{
-    LOG("%s", instance()->getWorkingDirectory().c_str());
-    luax_pushstring(L, instance()->getWorkingDirectory());
-
+    luax_pushstring(L, path.c_str());
     return 1;
+}
+
+int Wrap_Filesystem::setRequirePath(lua_State* L)
+{
+    std::string element = luax_checkstring(L, 1);
+    auto& requirePath   = instance()->getRequirePath();
+
+    requirePath.clear();
+
+    size_t startPos = 0;
+    size_t endPos   = element.find(';');
+
+    while (endPos != std::string::npos)
+    {
+        requirePath.push_back(element.substr(startPos, endPos - startPos));
+        startPos = endPos + 1;
+        endPos   = element.find(';', startPos);
+    }
+
+    requirePath.push_back(element.substr(startPos));
+
+    return 0;
 }
 
 static int loader(lua_State* L)
@@ -297,52 +489,6 @@ static int loader(lua_State* L)
     return 1;
 }
 
-static int write_or_append(lua_State* L, File::Mode mode)
-{
-    const char* filename = luaL_checkstring(L, 1);
-
-    const char* input = nullptr;
-    size_t length     = 0;
-
-    if (luax_istype(L, 2, Data::type))
-    {
-        Data* data = luax_totype<Data>(L, 2);
-        input      = (const char*)data->getData();
-        length     = data->getSize();
-    }
-    else if (lua_isstring(L, 2))
-        input = lua_tolstring(L, 2, &length);
-    else
-        return luaL_argerror(L, 2, "string or Data expected");
-
-    length = luaL_optinteger(L, 3, length);
-
-    try
-    {
-        if (mode == File::MODE_APPEND)
-            instance()->append(filename, input, length);
-        else
-            instance()->write(filename, input, length);
-    }
-    catch (love::Exception& e)
-    {
-        return luax_ioerror(L, "%s", e.what());
-    }
-
-    luax_pushboolean(L, true);
-    return 1;
-}
-
-int Wrap_Filesystem::write(lua_State* L)
-{
-    return write_or_append(L, File::MODE_WRITE);
-}
-
-int Wrap_Filesystem::append(lua_State* L)
-{
-    return write_or_append(L, File::MODE_APPEND);
-}
-
 // clang-format off
 static constexpr luaL_Reg functions[]
 {
@@ -369,6 +515,8 @@ static constexpr luaL_Reg functions[]
 
 static constexpr lua_CFunction types[] =
 {
+    love::open_filedata,
+    love::open_file,
     nullptr
 };
 // clang-format on

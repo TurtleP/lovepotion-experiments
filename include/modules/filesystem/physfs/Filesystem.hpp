@@ -3,10 +3,15 @@
 #include "modules/filesystem/Filesystem.tcc"
 #include "modules/filesystem/physfs/File.hpp"
 
+#include <map>
+
 namespace love
 {
     class Filesystem final : public FilesystemBase<Filesystem>
     {
+      public:
+        static const char* getLastError();
+
       public:
         Filesystem();
 
@@ -20,7 +25,7 @@ namespace love
 
         bool setupWriteDirectory();
 
-        bool setIdentity(const std::string& identity, bool appendToPath = false);
+        bool setIdentity(std::string_view identity, bool appendToPath = false);
 
         std::string getIdentity() const;
 
@@ -28,31 +33,25 @@ namespace love
 
         std::string getSource() const;
 
-        // TODO: mounting
-        bool mount(CommonPath path, const char* mountPoint, MountPermissions permissions,
-                   bool appendToPath);
+        bool mount(const char* archive, const char* mountpoint, bool appendToPath = false);
 
-        bool mountCommonPath(CommonPath path, const char* mountPoint, MountPermissions permissions,
-                             bool appendToPath);
+        // clang-format off
+        bool mount(Data* data, const char* archive, const char* mountpoint, bool appendToPath = false);
 
-        bool mountFullPath(const char* archive, const char* mountpoint,
-                           MountPermissions permissions, bool appendToPath);
+        bool mountFullPath(const char* archive, const char* mountpoint, MountPermissions permissions, bool appendToPath);
 
-        bool unmountFullPath(const char* fullpath);
+        bool mountCommonPath(CommonPath path, const char* mountPoint, MountPermissions permissions, bool appendToPath);
+        // clang-format on
+
+        bool unmount(const char* archive);
+
+        bool unmount(Data* data);
 
         bool unmount(CommonPath path);
 
-        File* openFile(const char* filename, File::Mode mode) const;
+        bool unmountFullPath(const char* fullpath);
 
-        FileData* newFileData(const void* data, size_t size, const char* filename) const;
-
-        FileData* read(const char* filename, int64_t size) const;
-
-        FileData* read(const char* filename) const;
-
-        void write(const char* filename, const void* data, int64_t size) const;
-
-        void append(const char* filename, const void* data, int64_t size) const;
+        File* openFile(std::string_view filename, File::Mode mode) const;
 
         std::string getFullCommonPath(CommonPath path);
 
@@ -74,19 +73,23 @@ namespace love
 
         bool createDirectory(const char* path);
 
-        bool remove(const char* filepath) const;
+        bool remove(const char* filepath);
 
-        bool getDirectoryItems(const char* path, std::vector<std::string_view>& items);
+        FileData* read(std::string_view filename, int64_t size) const;
+
+        FileData* read(std::string_view filename) const;
+
+        void write(std::string_view filename, const void* data, int64_t size) const;
+
+        void append(std::string_view filename, const void* data, int64_t size) const;
+
+        bool getDirectoryItems(const char*, std::vector<std::string>& items);
 
         void setSymlinksEnabled(bool enable);
 
         bool areSymlinksEnabled() const;
 
         std::vector<std::string>& getRequirePath();
-
-        void allowMountingPath(const char* path);
-
-        static const char* getLastError();
 
       private:
         struct CommonPathMountInfo
@@ -111,7 +114,10 @@ namespace love
         bool fusedSet;
 
         std::vector<std::string> requirePath;
-        std::vector<std::string_view> allowedMountPaths;
+
+        std::vector<std::string> allowedPaths;
+
+        std::map<std::string, StrongRef<Data>> mountedData;
 
         std::array<std::string, COMMONPATH_MAX_ENUM> fullPaths;
         std::array<CommonPathMountInfo, COMMONPATH_MAX_ENUM> commonPathMountInfo;

@@ -20,6 +20,8 @@ namespace love
       public:
         static inline Type type = Type("File", &Stream::type);
 
+        static constexpr int64_t MAX_FILE_SIZE = 0x20000000000000LL;
+
         enum Mode
         {
             MODE_CLOSED,
@@ -37,7 +39,7 @@ namespace love
             BUFFER_MAX_ENUM
         };
 
-        FileBase(const std::string& filename) :
+        FileBase(std::string_view filename) :
             filename(filename),
             mode(MODE_CLOSED),
             bufferMode(BUFFER_NONE),
@@ -143,6 +145,28 @@ namespace love
 
             return filename.substr(pos + 1);
         }
+
+        // clang-format off
+        STRINGMAP_DECLARE(fileTypes, FileType,
+            { "file",      FILETYPE_FILE      },
+            { "directory", FILETYPE_DIRECTORY },
+            { "symlink",   FILETYPE_SYMLINK   },
+            { "other",     FILETYPE_OTHER     }
+        );
+
+        STRINGMAP_DECLARE(openModes, Mode,
+            { "closed", MODE_CLOSED },
+            { "read",   MODE_READ   },
+            { "write",  MODE_WRITE  },
+            { "append", MODE_APPEND }
+        );
+
+        STRINGMAP_DECLARE(bufferModes, BufferMode,
+            { "none", BUFFER_NONE },
+            { "line", BUFFER_LINE },
+            { "full", BUFFER_FULL }
+        );
+        // clang-format on
 
       protected:
         std::string filename;

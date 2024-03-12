@@ -9,7 +9,7 @@ namespace love
     class File : public FileBase<File>
     {
       public:
-        File(const std::string& filename, Mode mode);
+        File(std::string_view filename, Mode mode);
 
         virtual ~File();
 
@@ -23,7 +23,7 @@ namespace love
 
         int64_t getSize() override;
 
-        bool seek(int64_t position, SeekOrigin origin);
+        bool seek(int64_t position, SeekOrigin origin = SEEKORIGIN_BEGIN);
 
         int64_t tell() override;
 

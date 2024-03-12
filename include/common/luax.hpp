@@ -93,9 +93,9 @@ namespace love
 
     bool luax_optboolean(lua_State* L, int index, bool default_value);
 
-    std::string_view luax_tostring(lua_State* L, int index);
+    std::string luax_tostring(lua_State* L, int index);
 
-    std::string_view luax_checkstring(lua_State* L, int index);
+    std::string luax_checkstring(lua_State* L, int index);
 
     void luax_pushstring(lua_State* L, std::string_view string);
 
@@ -235,8 +235,26 @@ namespace love
 
     void luax_pushtype(lua_State* L, Type& type, Object* object);
 
+    template<typename T>
+    void luax_pushtype(lua_State* L, T* object)
+    {
+        luax_pushtype(L, T::type, object);
+    }
+
+    template<typename T>
+    void luax_pushtype(lua_State* L, StrongRef<T>& object)
+    {
+        luax_pushtype(L, T::type, object);
+    }
+
     Proxy* luax_tryextractproxy(lua_State* L, int index);
 
+    template<typename T>
+    int luax_enumerror(lua_State* L, const char* name, const T& map, const char* value)
+    {
+        std::string expected = Map.expected(name, value);
+        return luaL_error(L, "%s", expected.c_str());
+    }
     // #endregion
 
     // #region Other

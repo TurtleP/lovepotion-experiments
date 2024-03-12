@@ -594,20 +594,20 @@ namespace love
         return default_value;
     }
 
-    std::string_view luax_tostring(lua_State* L, int index)
+    std::string luax_tostring(lua_State* L, int index)
     {
         size_t length;
         const char* string = lua_tolstring(L, index, &length);
 
-        return std::string_view(string, length);
+        return std::string(string, length);
     }
 
-    std::string_view luax_checkstring(lua_State* L, int index)
+    std::string luax_checkstring(lua_State* L, int index)
     {
         size_t length;
         const char* string = luaL_checklstring(L, index, &length);
 
-        return std::string_view(string, length);
+        return std::string(string, length);
     }
 
     void luax_pushstring(lua_State* L, std::string_view string)

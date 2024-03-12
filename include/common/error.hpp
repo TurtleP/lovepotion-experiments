@@ -20,4 +20,13 @@ namespace love
 #define E_NO_FILE_IN_LOVE_DIRS       "\n\tno '%s' in LOVE game directories."
 // Audio
 #define E_AUDIO_NOT_INITIALIZED "Failed to initialize ndsp"
+// Data
+#define E_INVALID_SIZE_PARAMETER  "Invalid size parameter (must be greater than 0)."
+#define E_INVALID_COUNT_PARAMETER "Invalid count parameter (must be greater than 0)."
+#define E_INVALID_OFFSET_AND_SIZE \
+    "The given offset and size parameters don't fit within the Data's size."
+#define E_DATAVIEW_OFFSET_AND_SIZE \
+    "Offset and size of Data View must fit within the original Data's size."
+
+#define E_DATAVIEW_INVALID_SIZE "DataView size must be greater than 0."
 } // namespace love

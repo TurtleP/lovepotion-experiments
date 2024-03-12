@@ -37,8 +37,8 @@ class Log
         const auto path     = std::string(location.file_name());
         const auto filename = path.substr(path.find_last_of('/') + 1);
 
-        const auto line     = (uint32_t)location.line();
-        const auto column   = (uint32_t)location.column();
+        const auto line     = (size_t)location.line();
+        const auto column   = (size_t)location.column();
         const auto funcname = location.function_name();
 
         fprintf(this->file, BUFFER_FORMAT, filename.c_str(), line, column, funcname, buffer.get());

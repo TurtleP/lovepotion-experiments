@@ -27,18 +27,18 @@ namespace love
 
         size_t getSize() const override;
 
-        std::string_view getFilename() const;
+        const std::string& getFilename() const;
 
-        std::string_view getExtension() const;
+        const std::string& getExtension() const;
 
-        std::string_view getName() const;
+        const std::string& getName() const;
 
       private:
         std::unique_ptr<char[]> data;
         uint64_t size;
 
-        std::string_view filename;
-        std::string_view extension;
-        std::string_view name;
+        std::string filename;
+        std::string extension;
+        std::string name;
     };
 } // namespace love
