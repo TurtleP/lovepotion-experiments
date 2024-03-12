@@ -37,7 +37,7 @@ namespace love
             BUFFER_MAX_ENUM
         };
 
-        FileBase(std::string_view filename) :
+        FileBase(const std::string& filename) :
             filename(filename),
             mode(MODE_CLOSED),
             bufferMode(BUFFER_NONE),
@@ -131,21 +131,21 @@ namespace love
             return this->mode;
         }
 
-        virtual std::string_view getFilename() const = 0;
+        virtual const std::string& getFilename() const = 0;
 
-        std::string_view getExtension() const
+        std::string getExtension() const
         {
-            std::string_view filename = this->getFilename();
-            size_t pos                = filename.find_last_of('.');
+            std::string filename = this->getFilename();
+            size_t pos           = filename.find_last_of('.');
 
-            if (pos == std::string_view::npos)
-                return std::string_view();
+            if (pos == std::string::npos)
+                return std::string();
 
             return filename.substr(pos + 1);
         }
 
       protected:
-        std::string_view filename;
+        std::string filename;
 
         Mode mode;
 

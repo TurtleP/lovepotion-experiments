@@ -284,7 +284,7 @@ static int loader(lua_State* L)
         replaceAll(element, "?", moduleName);
 
         Filesystem::Info info {};
-        if (instance->getInfo(element.c_str(), info) && info.type == Filesystem::FILETYPE_DIRECTORY)
+        if (instance->getInfo(element.c_str(), info) && info.type != Filesystem::FILETYPE_DIRECTORY)
         {
             lua_pop(L, 1);
             lua_pushstring(L, element.c_str());

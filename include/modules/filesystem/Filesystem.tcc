@@ -98,7 +98,7 @@ namespace love
         bool createRealDirectory(const std::string& path) const
         {
             FileType type = FILETYPE_MAX_ENUM;
-            if (!this->getRealPathType(path, type))
+            if (this->getRealPathType(path, type))
                 return type == FILETYPE_DIRECTORY;
 
             return std::filesystem::create_directories(path);

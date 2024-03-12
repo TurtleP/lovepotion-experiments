@@ -14,7 +14,7 @@ namespace love
         return fs != nullptr && fs->setupWriteDirectory();
     }
 
-    File::File(std::string_view filename, Mode mode) : FileBase(filename), file(nullptr)
+    File::File(const std::string& filename, Mode mode) : FileBase(filename), file(nullptr)
     {
         if (!this->open(mode))
             throw love::Exception(E_COULD_NOT_OPEN_FILE, filename);
@@ -48,8 +48,7 @@ namespace love
         if (!PHYSFS_isInit())
             throw love::Exception(E_PHYSFS_NOT_INITIALIZED);
 
-        std::string _filename(this->filename);
-        if ((mode == MODE_READ) && !PHYSFS_exists(_filename.c_str()))
+        if ((mode == MODE_READ) && !PHYSFS_exists(this->filename.c_str()))
             throw love::Exception(E_COULD_NOT_OPEN_FILE "Does not exist.", this->filename);
 
         if ((mode == MODE_APPEND || mode == MODE_WRITE) && !setupWriteDirectory())
@@ -64,17 +63,17 @@ namespace love
         {
             case MODE_READ:
             {
-                handle = PHYSFS_openRead(_filename.c_str());
+                handle = PHYSFS_openRead(this->filename.c_str());
                 break;
             }
             case MODE_WRITE:
             {
-                handle = PHYSFS_openWrite(_filename.c_str());
+                handle = PHYSFS_openWrite(this->filename.c_str());
                 break;
             }
             case MODE_APPEND:
             {
-                handle = PHYSFS_openAppend(_filename.c_str());
+                handle = PHYSFS_openAppend(this->filename.c_str());
                 break;
             }
             default:
@@ -246,7 +245,7 @@ namespace love
         return this->bufferMode;
     }
 
-    std::string_view File::getFilename() const
+    const std::string& File::getFilename() const
     {
         return this->filename;
     }

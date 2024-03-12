@@ -436,13 +436,11 @@ return function()
     local function earlyinit()
         -- If love.boot fails, return 1 and finish immediately
         local result = xpcall(love.boot, error_printer)
-        TRACE(result)
         if not result then return 1 end
 
         -- If love.init or love.run fails, don't return a value,
         -- as we want the error handler to take over
         result = xpcall(love.init, deferErrhand)
-        TRACE(result)
         if not result then return end
 
         -- NOTE: We can't assign to func directly, as we'd
