@@ -7,7 +7,7 @@ namespace love
 {
     Data* luax_checkdata(lua_State* L, int idx);
 
-    int data_open(lua_State* L);
+    int open_data(lua_State* L);
 } // namespace love
 
 namespace Wrap_Data
@@ -20,5 +20,5 @@ namespace Wrap_Data
 
     int performAtomic(lua_State* L);
 
-    extern luaL_Reg functions[];
+    extern luaL_Reg functions[0x0C];
 } // namespace Wrap_Data

@@ -2,6 +2,8 @@
 
 #include "utility/map.hpp"
 
+#include <stddef.h>
+
 namespace love
 {
     class Compressor

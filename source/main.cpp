@@ -25,6 +25,7 @@ static DoneAction runLove(char** argv, int argc, int& result, love::Variant& res
     luaL_openlibs(L);
     luaopen_bit(L);
 
+    love::preInit();
     love::luax_preload(L, love_initialize, "love");
 
     {
@@ -47,7 +48,7 @@ static DoneAction runLove(char** argv, int argc, int& result, love::Variant& res
         lua_pushstring(L, "embedded boot.lua");
         lua_rawseti(L, -2, -1);
 
-        for (int index = 1; index < args.size(); index++)
+        for (int index = 1; index < (int)args.size(); index++)
         {
             lua_pushstring(L, args[index]);
             lua_rawseti(L, -2, index);
@@ -103,6 +104,7 @@ static DoneAction runLove(char** argv, int argc, int& result, love::Variant& res
     }
 
     lua_close(L);
+    love::onExit();
 
     return action;
 }

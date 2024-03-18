@@ -7,6 +7,8 @@
 
 namespace love
 {
+    FileData* luax_getfiledata(lua_State* L, int idx, bool ioerror, int& nresults);
+
     FileData* luax_getfiledata(lua_State* L, int idx);
 
     bool luax_cangetfiledata(lua_State* L, int idx);

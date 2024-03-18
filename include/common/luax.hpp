@@ -216,7 +216,7 @@ namespace love
 
     int luax_register_module(lua_State* L, const WrappedModule& module);
 
-    void luax_register_type_init(lua_State* L, const Type* type);
+    void luax_register_type_init(lua_State* L, Type* type);
 
     void luax_register_type_inner(lua_State* L, std::span<const luaL_Reg> values);
 
@@ -250,9 +250,9 @@ namespace love
     Proxy* luax_tryextractproxy(lua_State* L, int index);
 
     template<typename T>
-    int luax_enumerror(lua_State* L, const char* name, const T& map, const char* value)
+    int luax_enumerror(lua_State* L, const char* name, const T& map, std::string_view value)
     {
-        std::string expected = Map.expected(name, value);
+        std::string expected = map.expected(name, value);
         return luaL_error(L, "%s", expected.c_str());
     }
     // #endregion

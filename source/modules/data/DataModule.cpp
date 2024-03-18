@@ -1,1 +1,212 @@
 #include "modules/data/DataModule.hpp"
+
+#include "common/b64.hpp"
+#include "common/int.hpp"
+
+#include <cmath>
+#include <list>
+
+namespace
+{
+    static constexpr char hexChars[17] = "0123456789abcdef";
+
+    std::string bytesToHex(const uint8_t* source, size_t sourceLength, size_t destinationLength)
+    {
+        destinationLength = sourceLength * 2;
+
+        if (destinationLength == 0)
+            return nullptr;
+
+        std::string destination(destinationLength + 1, '\0');
+
+        for (size_t index = 0; index < sourceLength; index++)
+        {
+            uint8_t byte = source[index];
+
+            destination[index * 2 + 0] = hexChars[byte >> 4];
+            destination[index * 2 + 1] = hexChars[byte & 0x0F];
+        }
+
+        return destination;
+    }
+
+    uint8_t nibble(char x)
+    {
+        if (x >= '0' && x <= '9')
+            return (uint8_t)(x - '0');
+        if (x >= 'A' && x <= 'F')
+            return (uint8_t)(x - 'A' + 0x0A);
+        if (x >= 'a' && x <= 'f')
+            return (uint8_t)(x - 'a' + 0x0A);
+
+        return 0;
+    }
+
+    std::unique_ptr<uint8_t[]> hexToBytes(const char* source, size_t sourceLength,
+                                          size_t& destinationLength)
+    {
+        if (sourceLength >= 2 && source[0] == '0' && (source[1] == 'x' || source[1] == 'X'))
+        {
+            source += 2;
+            sourceLength -= 2;
+        }
+
+        destinationLength = (sourceLength + 1) / 2;
+
+        if (destinationLength == 0)
+            return nullptr;
+
+        std::unique_ptr<uint8_t[]> destination;
+
+        try
+        {
+            destination = std::make_unique<uint8_t[]>(destinationLength);
+        }
+        catch (std::bad_alloc&)
+        {
+            throw love::Exception(E_OUT_OF_MEMORY);
+        }
+
+        for (size_t index = 0; index < sourceLength; index++)
+        {
+            destination[index] = nibble(source[index * 2]) << 4;
+
+            if (index * 2 + 1 < sourceLength)
+                destination[index] |= nibble(source[index * 2 + 1]);
+        }
+
+        return destination;
+    }
+} // namespace
+
+namespace love
+{
+    namespace data
+    {
+        CompressedData* compress(Compressor::Format format, const char* bytes, size_t size,
+                                 int level)
+        {
+            auto* compressor = Compressor::getCompressor(format);
+
+            if (compressor == nullptr)
+                throw love::Exception("Invalid compression format.");
+
+            size_t compressedSize = 0;
+            auto* compressedBytes =
+                compressor->compress(format, bytes, size, level, compressedSize);
+
+            CompressedData* data = nullptr;
+
+            try
+            {
+                data = new CompressedData(format, compressedBytes, compressedSize, size, true);
+            }
+            catch (love::Exception&)
+            {
+                delete[] compressedBytes;
+                throw;
+            }
+
+            return data;
+        }
+
+        char* decompress(Compressor::Format format, const char* bytes, size_t size, size_t& rawSize)
+        {
+            auto* compressor = Compressor::getCompressor(format);
+
+            if (compressor == nullptr)
+                throw love::Exception("Invalid compression format.");
+
+            return compressor->decompress(format, bytes, size, rawSize);
+        }
+
+        char* decompress(CompressedData* data, size_t& decompressedSize)
+        {
+            size_t rawSize = data->getDecompressedSize();
+
+            auto* bytes = decompress(data->getFormat(), (const char*)data->getData(),
+                                     data->getSize(), rawSize);
+
+            decompressedSize = rawSize;
+            return bytes;
+        }
+
+        std::string encode(EncodeFormat format, const void* source, size_t size,
+                           size_t& destinationLength, size_t lineLength)
+        {
+            switch (format)
+            {
+                default:
+                case ENCODE_BASE64:
+                    return b64_encode((const char*)source, size, lineLength, destinationLength);
+                case ENCODE_HEX:
+                    return bytesToHex((const uint8_t*)source, size, destinationLength).c_str();
+            }
+        }
+
+        std::unique_ptr<uint8_t[]> decode(EncodeFormat format, const char* source, size_t size,
+                                          size_t& destinationLength)
+        {
+            switch (format)
+            {
+                default:
+                case ENCODE_BASE64:
+                    return b64_decode(source, size, destinationLength);
+                case ENCODE_HEX:
+                    return hexToBytes(source, size, destinationLength);
+            }
+        }
+
+        void hash(HashFunction::Function function, const char* input, uint64_t size,
+                  HashFunction::Value& output)
+        {
+            HashFunction* hashFunction = HashFunction::getHashFunction(function);
+
+            if (hashFunction == nullptr)
+                throw love::Exception("Invalid hash function.");
+
+            hashFunction->hash(function, input, size, output);
+        }
+
+        void hash(HashFunction::Function function, Data* input, HashFunction::Value& output)
+        {
+            hash(function, (const char*)input->getData(), input->getSize(), output);
+        }
+
+        std::string hash(HashFunction::Function function, const char* input, uint64_t size)
+        {
+            HashFunction::Value output;
+            hash(function, input, size, output);
+
+            return std::string(output.data, output.size);
+        }
+
+        std::string hash(HashFunction::Function function, Data* input)
+        {
+            return hash(function, (const char*)input->getData(), input->getSize());
+        }
+    } // namespace data
+
+    DataModule::DataModule() : Module(M_DATA, "love.data")
+    {}
+
+    DataView* DataModule::newDataView(Data* data, size_t offset, size_t size) const
+    {
+        return new DataView(data, offset, size);
+    }
+
+    ByteData* DataModule::newByteData(size_t size) const
+    {
+        return new ByteData(size);
+    }
+
+    ByteData* DataModule::newByteData(const void* data, size_t size) const
+    {
+        return new ByteData(data, size);
+    }
+
+    ByteData* DataModule::newByteData(void* data, size_t size, bool own) const
+    {
+        return new ByteData(data, size, own);
+    }
+} // namespace love

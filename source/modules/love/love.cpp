@@ -3,9 +3,18 @@
 
 #include "modules/love/love.hpp"
 
+#include "modules/data/wrap_DataModule.hpp"
 #include "modules/event/wrap_Event.hpp"
 #include "modules/filesystem/wrap_Filesystem.hpp"
 #include "modules/timer/wrap_Timer.hpp"
+
+#include "boot.hpp"
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#include <stdio.h>
+#include <string.h>
 
 static constexpr char arg_lua[] = {
 #include "scripts/arg.lua"
@@ -23,23 +32,13 @@ static constexpr char nogame_lua[] = {
 #include "scripts/nogame.lua"
 };
 
-static constexpr char logfile_lua[] = {
-#include "scripts/logfile.lua"
-};
-
-static constexpr char nestlink_lua[] = {
-#include "scripts/nestlink.lua"
-};
-
 // clang-format off
 static constexpr luaL_Reg modules[] =
 {
+    { "love.data",       Wrap_DataModule::open },
     { "love.timer",      Wrap_Timer::open      },
     { "love.event",      Wrap_Event::open      },
     { "love.filesystem", Wrap_Filesystem::open },
-    #if defined(__DEBUG__)
-    { "love.log",        love_openLogfile      },
-    #endif
     { "love.arg",        love_openArg          },
     { "love.callbacks",  love_openCallbacks    },
     { "love.boot",       love_openBoot         },
@@ -143,6 +142,11 @@ int love_initialize(lua_State* L)
     lua_pushstring(L, love::CODENAME);
     lua_setfield(L, -2, "_version_codename");
 
+    lua_pushcfunction(L, love_openConsole);
+    lua_setfield(L, -2, "_openConsole");
+
+    lua_register(L, "print", love_print);
+
     lua_newtable(L);
     for (size_t index = 0; index < love::COMPATIBILITY.size(); index++)
     {
@@ -160,8 +164,8 @@ int love_initialize(lua_State* L)
     lua_pushstring(L, __OS__);
     lua_setfield(L, -2, "_os");
 
-    // love::luax_requre(L, "love.data");
-    // lua_pop(L, 1);
+    love::luax_require(L, "love.data");
+    lua_pop(L, 1);
 
 #if LUA_VERSION_NUM <= 501
     luax_addcompatibilityalias(L, "math", "fmod", "mod");
@@ -173,6 +177,92 @@ int love_initialize(lua_State* L)
     // love::luax_preload(L, luaopen_https, "https");
 
     return 1;
+}
+
+/**
+ * @brief Initializes the standard input/output for 3dslink.
+ * Except we don't use 3dslink, we want a specific ip address.
+ * This is taken in from the user in conf.lua as a string.
+ *
+ * Users will need to use telnet on Windows or netcat on Linux:
+ * `telnet/netcat 192.168.x.x 17491`
+ */
+int love_openConsole(lua_State* L)
+{
+    struct sockaddr_in server;
+    int lsockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (lsockfd < 0)
+    {
+        love::luax_pushboolean(L, false);
+        return 1;
+    }
+
+    std::memset(&server, 0, sizeof(server));
+
+    server.sin_family      = AF_INET;
+    server.sin_addr.s_addr = 0;
+    server.sin_port        = htons(STDIO_PORT);
+
+    if (bind(lsockfd, (struct sockaddr*)&server, sizeof(server)) < 0)
+    {
+        love::luax_pushboolean(L, false);
+        close(lsockfd);
+        return 1;
+    }
+
+    if (listen(lsockfd, 5) < 0)
+    {
+        love::luax_pushboolean(L, false);
+        close(lsockfd);
+        return 1;
+    }
+
+    int sockfd = accept(lsockfd, NULL, NULL);
+    close(lsockfd);
+
+    if (sockfd < 0)
+    {
+        love::luax_pushboolean(L, false);
+        return 1;
+    }
+
+    fflush(stdout);
+    dup2(sockfd, STDOUT_FILENO);
+
+    close(sockfd);
+
+    love::luax_pushboolean(L, true);
+    return 1;
+}
+
+int love_print(lua_State* L)
+{
+    int argc = lua_gettop(L);
+    lua_getglobal(L, "tostring");
+
+    std::string result {};
+
+    for (int index = 1; index <= argc; index++)
+    {
+        lua_pushvalue(L, -1);
+        lua_pushvalue(L, index);
+        lua_call(L, 1, 1);
+
+        const char* string = lua_tostring(L, -1);
+        if (string == nullptr)
+            return luaL_error(L, "'tostring' must return a string to 'print'");
+
+        if (index > 1)
+            result += "\t";
+
+        result += string;
+
+        lua_pop(L, 1);
+    }
+
+    std::printf("[LOVE] %s\r\n", result.c_str());
+    return 0;
 }
 
 int love_openNoGame(lua_State* L)
@@ -202,14 +292,6 @@ int love_openCallbacks(lua_State* L)
 int love_openBoot(lua_State* L)
 {
     if (luaL_loadbuffer(L, boot_lua, sizeof(boot_lua), "boot.lua") == 0)
-        lua_call(L, 0, 1);
-
-    return 1;
-}
-
-int love_openLogfile(lua_State* L)
-{
-    if (luaL_loadbuffer(L, logfile_lua, sizeof(logfile_lua), "logfile.lua") == 0)
         lua_call(L, 0, 1);
 
     return 1;

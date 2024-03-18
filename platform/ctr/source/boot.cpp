@@ -1,9 +1,8 @@
 #include "boot.hpp"
 
 #include <3ds.h>
-#include <stdlib.h>
 
-#include "utility/logfile.hpp"
+#include <stdlib.h>
 
 namespace love
 {

@@ -24,13 +24,6 @@ freely, subject to the following restrictions:
 
 local love = require("love")
 
-local _debug, result = pcall(require, "love.log")
-local file = _debug and result.new("callbacks.log")
-local function TRACE(format, ...)
-    if not file then return end
-    file:trace(format, ...)
-end
-
 function love.createhandlers()
 
     -- Standard callback handlers.
@@ -232,7 +225,7 @@ end
 
 function love.run()
     if love.load then
-        love.load(arg)
+        love.load(love.parsedGameArguments, love.rawGameArguments)
     end
 
     if love.timer then
@@ -252,7 +245,9 @@ function love.run()
             for name, a, b, c, d, e, f in love.event.poll() do
                 if name == "quit" then
                     if not love.quit or not love.quit() then
-                        love.audio.stop()
+                        if love.audio then
+                            love.audio.stop()
+                        end
                         return a or 0
                     end
                 end
@@ -294,15 +289,13 @@ end
 local debug, print, tostring, error = debug, print, tostring, error
 
 function love.threaderror(t, err)
-    TRACE("Thread error (" .. tostring(t) .. ")\n\n" .. err)
     error("Thread error (" .. tostring(t) .. ")\n\n" .. err, 0)
 end
 
 local utf8 = require("utf8")
 
 local function error_printer(msg, layer)
-    local trace = debug.traceback("Error: " .. tostring(msg), 1 + (layer or 1)):gsub("\n[^\n]+$", "")
-    TRACE(trace)
+    print(debug.traceback("Error: " .. tostring(msg), 1 + (layer or 1)):gsub("\n[^\n]+$", ""))
 end
 
 function love.errhand(msg)

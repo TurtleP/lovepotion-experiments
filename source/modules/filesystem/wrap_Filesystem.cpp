@@ -1,6 +1,7 @@
 #include "modules/filesystem/wrap_Filesystem.hpp"
 
 #include "modules/data/wrap_Data.hpp"
+#include "modules/data/wrap_DataModule.hpp"
 #include "modules/filesystem/physfs/Filesystem.hpp"
 
 #include "modules/filesystem/wrap_File.hpp"
@@ -94,29 +95,116 @@ int Wrap_Filesystem::mount(lua_State* L)
         Data* data = luax_checkdata(L, 1);
         int start  = 2;
 
-        if (luax_istype(L, 1, FileData::type))
+        if (luax_istype(L, 1, FileData::type) && !lua_isstring(L, 3))
         {
             FileData* fileData = luax_checkfiledata(L, 1);
             archive            = fileData->getFilename();
             start              = 2;
         }
+        else
+        {
+            archive = luaL_checkstring(L, 2);
+            start   = 3;
+        }
+
+        const char* mountPoint = luaL_checkstring(L, start + 0);
+        bool append            = luax_optboolean(L, start + 1, false);
+
+        luax_pushboolean(L, instance()->mount(data, archive.c_str(), mountPoint, append));
+        return 1;
     }
+    else
+        archive = luax_checkstring(L, 1);
+
+    const char* mountPoint = luaL_checkstring(L, 2);
+    bool append            = luax_optboolean(L, 3, false);
+
+    luax_pushboolean(L, instance()->mount(archive.c_str(), mountPoint, append));
+    return 1;
 }
 
 int Wrap_Filesystem::mountFullPath(lua_State* L)
-{}
+{
+    const char* fullpath   = luaL_checkstring(L, 1);
+    const char* mountPoint = luaL_checkstring(L, 2);
+
+    auto permissions = Filesystem::MOUNT_PERMISSIONS_READ;
+
+    if (!lua_isnoneornil(L, 3))
+    {
+        const char* type = luaL_checkstring(L, 3);
+        if (!Filesystem::getConstant(type, permissions))
+            return luax_enumerror(L, "mount permissions", Filesystem::mountPermissions, type);
+    }
+
+    bool append = luax_optboolean(L, 4, false);
+    luax_pushboolean(L, instance()->mountFullPath(fullpath, mountPoint, permissions, append));
+
+    return 1;
+}
 
 int Wrap_Filesystem::mountCommonPath(lua_State* L)
-{}
+{
+    const char* commonPathStr = luaL_checkstring(L, 1);
+    auto commonPath           = Filesystem::COMMONPATH_MAX_ENUM;
+
+    if (!Filesystem::getConstant(commonPathStr, commonPath))
+        return luax_enumerror(L, "common path", Filesystem::commonPaths, commonPathStr);
+
+    const char* mountPoint = luaL_checkstring(L, 2);
+
+    auto permissions = Filesystem::MOUNT_PERMISSIONS_READ;
+    if (!lua_isnoneornil(L, 3))
+    {
+        const char* type = luaL_checkstring(L, 3);
+        if (!Filesystem::getConstant(type, permissions))
+            return luax_enumerror(L, "mount permissions", Filesystem::mountPermissions, type);
+    }
+
+    bool append = luax_optboolean(L, 4, false);
+
+    luax_pushboolean(L, instance()->mountCommonPath(commonPath, mountPoint, permissions, append));
+
+    return 1;
+}
 
 int Wrap_Filesystem::unmount(lua_State* L)
-{}
+{
+    if (luax_istype(L, 1, Data::type))
+    {
+        Data* data = luax_checkdata(L, 1);
+        luax_pushboolean(L, instance()->unmount(data));
+    }
+    else
+    {
+        const char* archive = luaL_checkstring(L, 1);
+        luax_pushboolean(L, instance()->unmount(archive));
+    }
+
+    return 1;
+}
 
 int Wrap_Filesystem::unmountFullPath(lua_State* L)
-{}
+{
+    const char* fullpath = luaL_checkstring(L, 1);
+
+    luax_pushboolean(L, instance()->unmountFullPath(fullpath));
+
+    return 1;
+}
 
 int Wrap_Filesystem::unmountCommonPath(lua_State* L)
-{}
+{
+    const char* commonPathStr = luaL_checkstring(L, 1);
+    auto commonPath           = Filesystem::COMMONPATH_MAX_ENUM;
+
+    if (!Filesystem::getConstant(commonPathStr, commonPath))
+        return luax_enumerror(L, "common path", Filesystem::commonPaths, commonPathStr);
+
+    luax_pushboolean(L, instance()->unmount(commonPath));
+
+    return 1;
+}
 
 int Wrap_Filesystem::openFile(lua_State* L)
 {
@@ -125,7 +213,7 @@ int Wrap_Filesystem::openFile(lua_State* L)
 
     File::Mode mode = File::MODE_CLOSED;
     if (!File::getConstant(modeString, mode))
-        return luaL_error(L, "Invalid file mode '%s'.", modeString);
+        return luax_enumerror(L, "file open mode", File::openModes, modeString);
 
     File* file = nullptr;
     try
@@ -144,7 +232,17 @@ int Wrap_Filesystem::openFile(lua_State* L)
 }
 
 int Wrap_Filesystem::getFullCommonPath(lua_State* L)
-{}
+{
+    const char* commonPathStr = luaL_checkstring(L, 1);
+    auto commonPath           = Filesystem::COMMONPATH_MAX_ENUM;
+
+    if (!Filesystem::getConstant(commonPathStr, commonPath))
+        return luax_enumerror(L, "common path", Filesystem::commonPaths, commonPathStr);
+
+    luax_pushstring(L, instance()->getFullCommonPath(commonPath));
+
+    return 1;
+}
 
 int Wrap_Filesystem::getWorkingDirectory(lua_State* L)
 {
@@ -223,7 +321,46 @@ int Wrap_Filesystem::remove(lua_State* L)
 }
 
 int Wrap_Filesystem::read(lua_State* L)
-{}
+{
+    auto containerType = data::CONTAINER_STRING;
+    int start          = 1;
+
+    if (lua_type(L, 2) == LUA_TSTRING)
+    {
+        containerType = luax_checkcontainertype(L, 1);
+        start         = 2;
+    }
+
+    const char* filename = luaL_checkstring(L, start + 0);
+    int64_t length       = luaL_optinteger(L, start + 1, -1);
+
+    FileData* data = nullptr;
+
+    try
+    {
+        if (length > 0)
+            data = instance()->read(filename, length);
+        else
+            data = instance()->read(filename);
+    }
+    catch (love::Exception& e)
+    {
+        return luax_ioerror(L, "%s", e.what());
+    }
+
+    if (data == nullptr)
+        return luax_ioerror(L, "Could not read file '%s'.", filename);
+
+    if (containerType == data::CONTAINER_STRING)
+        luax_pushtype(L, data);
+    else
+        lua_pushlstring(L, (const char*)data->getData(), data->getSize());
+
+    lua_pushinteger(L, data->getSize());
+    data->release();
+
+    return 1;
+}
 
 static int write_or_append(lua_State* L, File::Mode mode)
 {
@@ -272,10 +409,43 @@ int Wrap_Filesystem::append(lua_State* L)
 }
 
 int Wrap_Filesystem::getDirectoryItems(lua_State* L)
-{}
+{
+    const char* directory = luaL_checkstring(L, 1);
+    std::vector<std::string> items {};
+
+    instance()->getDirectoryItems(directory, items);
+
+    lua_createtable(L, items.size(), 0);
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        lua_pushstring(L, items[i].c_str());
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    return 1;
+}
 
 int Wrap_Filesystem::lines(lua_State* L)
-{}
+{
+    if (lua_isstring(L, 1))
+    {
+        File* file = nullptr;
+
+        const char* filename = luaL_checkstring(L, 1);
+        luax_catchexcept(L, [&] { file = instance()->openFile(filename, File::MODE_READ); });
+
+        luax_pushtype(L, file);
+        file->release();
+    }
+    else
+        return luaL_argerror(L, 1, "expected filename.");
+
+    lua_pushstring(L, "");
+    lua_pushstring(L, 0);
+    lua_pushcclosure(L, Wrap_File::lines, 3);
+
+    return 1;
+}
 
 int Wrap_Filesystem::exists(lua_State* L)
 {
@@ -292,12 +462,11 @@ int Wrap_Filesystem::load(lua_State* L)
 
     if (!lua_isnoneornil(L, 2))
     {
-        const char* modestr = luaL_checkstring(L, 2);
-        if (!Filesystem::getConstant(modestr, mode))
-            return luaL_error(L, "Invalid load mode '%s'.", modestr);
+        const char* modeStr = luaL_checkstring(L, 2);
+        if (!Filesystem::getConstant(modeStr, mode))
+            return luax_enumerror(L, "load mode", Filesystem::loadModes, modeStr);
     }
 
-    // TODO: file data
     Data* data = nullptr;
 
     try
@@ -352,7 +521,7 @@ int Wrap_Filesystem::getInfo(lua_State* L)
     {
         const char* type = luaL_checkstring(L, start);
         if (!Filesystem::getConstant(type, filter))
-            return luaL_error(L, "Invalid file type '%s'.", type);
+            return luax_enumerror(L, "file type", Filesystem::fileTypes, type);
 
         start++;
     }
@@ -365,9 +534,9 @@ int Wrap_Filesystem::getInfo(lua_State* L)
             return 1;
         }
 
-        std::string_view type;
+        std::string_view type {};
         if (!Filesystem::getConstant(info.type, type))
-            return luaL_error(L, "Invalid file type '%d'.", info.type);
+            return luaL_error(L, "Unknown file type.");
 
         if (lua_istable(L, start))
             lua_pushvalue(L, start);
@@ -416,7 +585,45 @@ int Wrap_Filesystem::areSymlinksEnabled(lua_State* L)
 }
 
 int Wrap_Filesystem::newFileData(lua_State* L)
-{}
+{
+    if (lua_gettop(L) == 1)
+    {
+        int results = 0;
+        auto* data  = luax_getfiledata(L, 1, true, results);
+
+        if (data == nullptr)
+            return results;
+
+        luax_pushtype(L, data);
+        data->release();
+
+        return 1;
+    }
+
+    size_t length       = 0;
+    const void* pointer = nullptr;
+
+    if (luax_istype(L, 1, Data::type))
+    {
+        auto* data = luax_checkdata(L, 1);
+        pointer    = data->getData();
+        length     = data->getSize();
+    }
+    else if (lua_isstring(L, 1))
+        pointer = luaL_checklstring(L, 1, &length);
+    else
+        return luaL_argerror(L, 1, "string or Data expected");
+
+    const char* filename = luaL_checkstring(L, 2);
+
+    FileData* data = nullptr;
+    luax_catchexcept(L, [&] { data = instance()->newFileData(pointer, length, filename); });
+
+    luax_pushtype(L, data);
+    data->release();
+
+    return 1;
+}
 
 int Wrap_Filesystem::getRequirePath(lua_State* L)
 {
@@ -489,6 +696,114 @@ static int loader(lua_State* L)
     return 1;
 }
 
+namespace love
+{
+    File* luax_getfile(lua_State* L, int index)
+    {
+        File* result = nullptr;
+
+        if (lua_isstring(L, index))
+        {
+            const char* filename = luaL_checkstring(L, index);
+            try
+            {
+                result = instance()->openFile(filename, File::MODE_CLOSED);
+            }
+            catch (love::Exception& e)
+            {
+                luax_ioerror(L, "%s", e.what());
+            }
+        }
+        else
+        {
+            result = luax_checkfile(L, index);
+            result->retain();
+        }
+
+        return result;
+    }
+
+    FileData* luax_getfiledata(lua_State* L, int index, bool error, int& results)
+    {
+        FileData* data = nullptr;
+        File* file     = nullptr;
+        results        = 0;
+
+        if (lua_isstring(L, index) || luax_istype(L, index, File::type))
+            file = luax_getfile(L, index);
+        else if (luax_istype(L, index, FileData::type))
+        {
+            data = luax_checkfiledata(L, index);
+            data->retain();
+        }
+
+        if (!data && !file)
+        {
+            results = luaL_argerror(L, index, "filename, File, or FileData expected");
+            return nullptr;
+        }
+        else if (file && !data)
+        {
+            try
+            {
+                data = file->read();
+            }
+            catch (love::Exception& e)
+            {
+                file->release();
+                if (error)
+                    results = luax_ioerror(L, "%s", e.what());
+                else
+                    results = luaL_error(L, "%s", e.what());
+
+                return nullptr;
+            }
+
+            file->release();
+        }
+
+        return data;
+    }
+
+    FileData* luax_getfiledata(lua_State* L, int index)
+    {
+        int results = 0;
+        return luax_getfiledata(L, index, false, results);
+    }
+
+    Data* luax_getdata(lua_State* L, int index)
+    {
+        Data* data = nullptr;
+        File* file = nullptr;
+
+        if (lua_isstring(L, index) || luax_istype(L, index, File::type))
+            file = luax_getfile(L, index);
+        else if (luax_istype(L, index, Data::type))
+        {
+            data = luax_checkdata(L, index);
+            data->retain();
+        }
+
+        if (!data && !file)
+        {
+            luaL_argerror(L, index, "filename, File, or Data expected");
+            return nullptr;
+        }
+
+        if (file)
+        {
+            // clang-format off
+            luax_catchexcept(L,
+                [&] { data = file->read();   },
+                [&](bool) { file->release(); }
+            );
+            // clang-format on
+        }
+
+        return data;
+    }
+} // namespace love
+
 // clang-format off
 static constexpr luaL_Reg functions[]
 {
@@ -510,7 +825,26 @@ static constexpr luaL_Reg functions[]
     { "setFused",               Wrap_Filesystem::setFused               },
     { "setIdentity",            Wrap_Filesystem::setIdentity            },
     { "setSource",              Wrap_Filesystem::setSource              },
-    { "write",                  Wrap_Filesystem::write                  }
+    { "write",                  Wrap_Filesystem::write                  },
+    { "lines",                  Wrap_Filesystem::lines                  },
+    { "setRequirePath",         Wrap_Filesystem::setRequirePath         },
+    { "getRequirePath",         Wrap_Filesystem::getRequirePath         },
+    { "openFile",               Wrap_Filesystem::openFile               },
+    { "newFileData",            Wrap_Filesystem::newFileData            },
+    { "getDirectoryItems",      Wrap_Filesystem::getDirectoryItems      },
+    { "createDirectory",        Wrap_Filesystem::createDirectory        },
+    { "remove",                 Wrap_Filesystem::remove                 },
+    { "read",                   Wrap_Filesystem::read                   },
+    { "mount",                  Wrap_Filesystem::mount                  },
+    { "mountFullPath",          Wrap_Filesystem::mountFullPath          },
+    { "mountCommonPath",        Wrap_Filesystem::mountCommonPath        },
+    { "unmount",                Wrap_Filesystem::unmount                },
+    { "unmountFullPath",        Wrap_Filesystem::unmountFullPath        },
+    { "unmountCommonPath",      Wrap_Filesystem::unmountCommonPath      },
+    { "getFullCommonPath",      Wrap_Filesystem::getFullCommonPath      },
+    { "getInfo",                Wrap_Filesystem::getInfo                },
+    { "setSymlinksEnabled",     Wrap_Filesystem::setSymlinksEnabled     },
+    { "areSymlinksEnabled",     Wrap_Filesystem::areSymlinksEnabled     }
 };
 
 static constexpr lua_CFunction types[] =

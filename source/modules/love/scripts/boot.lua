@@ -29,17 +29,14 @@ local love = require("love")
 require("love.arg")
 require("love.callbacks")
 
-local _debug, result = pcall(require, "love.log")
-local file = _debug and result.new("boot.log")
-local function TRACE(format, ...)
-    if not file then return end
-    file:trace(format, ...)
-end
-
 local function uridecode(s)
     return s:gsub("%%%x%x", function(str)
         return string.char(tonumber(str:sub(2), 16))
     end)
+end
+
+local function isIPAddress(address)
+    return address:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
 end
 
 local no_game_code = false
@@ -70,7 +67,6 @@ function love.boot()
     local can_has_game = pcall(love.filesystem.setSource, exepath)
 
     -- It's a fused game, don't parse --game argument
-    TRACE("can_has_game: %s", tostring(can_has_game))
     if can_has_game then
         love.arg.options.game.set = true
     end
@@ -174,7 +170,7 @@ function love.init()
             usedpiscale = true,
         },
         modules = {
-            data = false,
+            data = true,
             event = true,
             keyboard = false,
             mouse = false,
@@ -232,7 +228,7 @@ function love.init()
 
     -- Console hack, part 2.
     if c.console and love._openConsole and not openedconsole then
-        love._openConsole()
+        love._openConsole(c.console)
     end
 
     -- Hack for disabling accelerometer-as-joystick on Android / iOS.
@@ -413,9 +409,7 @@ end
 local print, debug, tostring = print, debug, tostring
 
 local function error_printer(msg, layer)
-    _value = (debug.traceback("Error: " .. tostring(msg), 1+(layer or 1)):gsub("\n[^\n]+$", ""))
-    print(_value)
-    TRACE(_value)
+    print(debug.traceback("Error: " .. tostring(msg), 1+(layer or 1)):gsub("\n[^\n]+$", ""))
 end
 
 -----------------------------------------------------------

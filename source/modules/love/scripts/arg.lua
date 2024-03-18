@@ -28,13 +28,6 @@ local love = require("love")
 love.path = {}
 love.arg = {}
 
-local _debug, result = pcall(require, "love.log")
-local file = _debug and result.new("arg.log")
-local function TRACE(format, ...)
-    if not file then return end
-    file:trace(format, ...)
-end
-
 -- Replace any \ with /.
 function love.path.normalslashes(p)
     return p:gsub("\\", "/")
@@ -72,7 +65,6 @@ end
 
 -- Converts any path into a full path.
 function love.path.getFull(p)
-
     if love.path.abs(p) then
         return love.path.normalslashes(p)
     end
@@ -83,7 +75,7 @@ function love.path.getFull(p)
 
     -- Construct a full path.
     local full = cwd .. love.path.normalslashes(p)
-    TRACE("getFull: %s", full)
+
     -- Remove trailing /., if applicable
     return full:match("(.-)/%.$") or full
 end
@@ -166,7 +158,7 @@ function love.arg.parseOptions(arg)
         end
         i = i + 1
     end
-    TRACE("game: %d", game)
+
     if not love.arg.options.game.set then
         love.arg.parseOption(love.arg.options.game, game or 0)
     end

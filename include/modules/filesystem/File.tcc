@@ -147,18 +147,11 @@ namespace love
         }
 
         // clang-format off
-        STRINGMAP_DECLARE(fileTypes, FileType,
-            { "file",      FILETYPE_FILE      },
-            { "directory", FILETYPE_DIRECTORY },
-            { "symlink",   FILETYPE_SYMLINK   },
-            { "other",     FILETYPE_OTHER     }
-        );
-
         STRINGMAP_DECLARE(openModes, Mode,
-            { "closed", MODE_CLOSED },
-            { "read",   MODE_READ   },
-            { "write",  MODE_WRITE  },
-            { "append", MODE_APPEND }
+            { "c", MODE_CLOSED },
+            { "r", MODE_READ   },
+            { "w", MODE_WRITE  },
+            { "a", MODE_APPEND }
         );
 
         STRINGMAP_DECLARE(bufferModes, BufferMode,

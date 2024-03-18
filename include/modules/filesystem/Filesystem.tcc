@@ -13,6 +13,8 @@
 
 #include <sys/stat.h>
 
+#include <cstring>
+
 namespace love
 {
     template<class T>
@@ -112,7 +114,7 @@ namespace love
         FileData* newFileData(const void* data, size_t size, std::string_view filename) const
         {
             FileData* fileData = new FileData(size, filename);
-            std::copy_n((const void*)data, size, fileData->getData());
+            std::memcpy(fileData->getData(), data, size);
 
             return fileData;
         }

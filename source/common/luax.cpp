@@ -791,10 +791,10 @@ namespace love
 
     void luax_register_type_inner(lua_State* L, std::span<const luaL_Reg> functions)
     {
-        for (const luaL_Reg& function : functions)
+        for (const auto& registry : functions)
         {
-            lua_pushcfunction(L, function.func);
-            lua_setfield(L, -2, function.name);
+            lua_pushcfunction(L, registry.func);
+            lua_setfield(L, -2, registry.name);
         }
     }
 

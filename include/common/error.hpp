@@ -27,6 +27,14 @@ namespace love
     "The given offset and size parameters don't fit within the Data's size."
 #define E_DATAVIEW_OFFSET_AND_SIZE \
     "Offset and size of Data View must fit within the original Data's size."
-
-#define E_DATAVIEW_INVALID_SIZE "DataView size must be greater than 0."
+#define E_OFFSET_AND_SIZE_ARGS_FIT_WITHIN_DATA \
+    "Offset and size arguments must fit within the given Data's size."
+#define E_DATAVIEW_INVALID_SIZE           "DataView size mn ust be greater than 0."
+#define E_HASH_FUNCTION_NOT_SUPPORTED     "Hash function not supported by "
+#define E_INVALID_COMPRESSION_FORMAT_LZ4  "Invalid format (expecting LZ4)."
+#define E_COULD_NOT_LZ4_DECOMPRESS_DATA   "Could not decompress LZ4-compressed data."
+#define E_INVALID_COMPRESSION_FORMAT_ZLIB "Invalid format (expecting zlib or gzip)."
+#define E_DATA_PACK_OFFSET_FORMAT_PARAMS \
+    "The given byte offset and pack format parameters do not fit within the ByteData's size."
+#define E_DATA_SIZE_MUST_BE_POSITIVE "Data size must be a positive number."
 } // namespace love

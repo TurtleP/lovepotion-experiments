@@ -76,7 +76,7 @@ int Wrap_File::read(lua_State* L)
     auto* self               = luax_checkfile(L, 1);
     StrongRef<FileData> data = nullptr;
 
-    auto containerType = DataModule::CONTAINER_STRING;
+    auto containerType = data::CONTAINER_STRING;
     int start          = 2;
 
     if (lua_type(L, 2) == LUA_TSTRING)
@@ -99,7 +99,7 @@ int Wrap_File::read(lua_State* L)
         return luax_ioerror(L, "%s", e.what());
     }
 
-    if (containerType == DataModule::CONTAINER_DATA)
+    if (containerType == data::CONTAINER_DATA)
         luax_pushtype(L, data.get());
     else
         lua_pushlstring(L, (const char*)data->getData(), (size_t)data->getSize());
@@ -355,7 +355,7 @@ int Wrap_File::getBuffer(lua_State* L)
     auto* self   = luax_checkfile(L, 1);
     int64_t size = 0;
 
-    const auto mode        = self->getBuffer(size);
+    auto mode              = self->getBuffer(size);
     const char* modeString = nullptr;
 
     if (!File::getConstant(modeString, mode))
@@ -372,12 +372,12 @@ int Wrap_File::getMode(lua_State* L)
     auto* self      = luax_checkfile(L, 1);
     const auto mode = self->getMode();
 
-    const char* modeString = = nullptr;
+    std::string_view modeString {};
 
     if (!File::getConstant(mode, modeString))
         return luax_ioerror(L, "Unknown file mode.");
 
-    lua_pushstring(L, modeString);
+    luax_pushstring(L, modeString);
 
     return 1;
 }
@@ -419,7 +419,6 @@ static constexpr luaL_Reg functions[] =
     { "getMode",      Wrap_File::getMode      },
     { "getFilename",  Wrap_File::getFilename  },
     { "getExtension", Wrap_File::getExtension }
-
 };
 // clang-format on
 

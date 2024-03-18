@@ -3,15 +3,19 @@
 #include "common/Module.hpp"
 
 #include "modules/data/ByteData.hpp"
+#include "modules/data/CompressedData.hpp"
 #include "modules/data/DataView.hpp"
+#include "modules/data/misc/HashFunction.hpp"
 
 #include "utility/map.hpp"
 
+#include <memory>
+#include <string>
+
 namespace love
 {
-    class DataModule : public Module
+    namespace data
     {
-      public:
         enum EncodeFormat
         {
             ENCODE_BASE64,
@@ -26,22 +30,28 @@ namespace love
             CONTAINER_MAX_ENUM
         };
 
-        DataModule();
-
-        virtual ~DataModule();
-
-        CompressedData* compress(const void* data, size_t size,
-                                 CompressedData::Format format) const;
+        CompressedData* compress(Compressor::Format format, const char* bytes, size_t size,
+                                 int level = -1);
 
         char* decompress(CompressedData* data, size_t& size);
 
-        DataView* newDataView(Data* data, size_t offset, size_t size) const;
+        char* decompress(Compressor::Format format, const char* bytes, size_t size,
+                         size_t& rawSize);
 
-        ByteData* newByteData(size_t size) const;
+        std::string encode(EncodeFormat format, const void* source, size_t size,
+                           size_t& destinationLength, size_t lineLength = 0);
 
-        ByteData* newByteData(const void* data, size_t size) const;
+        std::unique_ptr<uint8_t[]> decode(EncodeFormat format, const char* source, size_t size,
+                                          size_t& destinationLength);
 
-        ByteData* newByteData(void* data, size_t size, bool own) const;
+        std::string hash(HashFunction::Function function, Data* input);
+
+        std::string hash(HashFunction::Function function, const char* input, uint64_t size);
+
+        void hash(HashFunction::Function function, Data* input, HashFunction::Value& output);
+
+        void hash(HashFunction::Function function, const char* input, uint64_t size,
+                  HashFunction::Value& output);
 
         // clang-format off
         STRINGMAP_DECLARE(encodeFormats, EncodeFormat,
@@ -54,5 +64,22 @@ namespace love
             { "string", CONTAINER_STRING }
         );
         // clang-format on
+    } // namespace data
+
+    class DataModule : public Module
+    {
+      public:
+        DataModule();
+
+        virtual ~DataModule()
+        {}
+
+        DataView* newDataView(Data* data, size_t offset, size_t size) const;
+
+        ByteData* newByteData(size_t size) const;
+
+        ByteData* newByteData(const void* data, size_t size) const;
+
+        ByteData* newByteData(void* data, size_t size, bool own) const;
     };
 } // namespace love

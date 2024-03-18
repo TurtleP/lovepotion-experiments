@@ -78,19 +78,19 @@ static int wrap_Data_getT(lua_State* L)
 }
 
 // clang-format off
-luaL_Reg Wrap_Data::functions[] =
+luaL_Reg Wrap_Data::functions[0x0C] =
 {
-    { "getPointer", Wrap_Data::getPointer        },
-    { "getSize",    Wrap_Data::getSize           },
-    { "getString",  Wrap_Data::getString         },
-    { "getFloat",   wrap_Data_getT<float>        },
-	{ "getDouble",  wrap_Data_getT<double>       },
-	{ "getInt8",    wrap_Data_getT<int8_t>       },
-	{ "getUInt8",   wrap_Data_getT<uint8_t>      },
-	{ "getInt16",   wrap_Data_getT<int16_t>      },
-	{ "getUInt16",  wrap_Data_getT<uint16_t>     },
-	{ "getInt32",   wrap_Data_getT<int32_t>      },
-	{ "getUInt32",  wrap_Data_getT<uint32_t>     },
+    { "getPointer",    Wrap_Data::getPointer     },
+    { "getSize",       Wrap_Data::getSize        },
+    { "getString",     Wrap_Data::getString      },
+    { "getFloat",      wrap_Data_getT<float>     },
+	{ "getDouble",     wrap_Data_getT<double>    },
+	{ "getInt8",       wrap_Data_getT<int8_t>    },
+	{ "getUInt8",      wrap_Data_getT<uint8_t>   },
+	{ "getInt16",      wrap_Data_getT<int16_t>   },
+	{ "getUInt16",     wrap_Data_getT<uint16_t>  },
+	{ "getInt32",      wrap_Data_getT<int32_t>   },
+	{ "getUInt32",     wrap_Data_getT<uint32_t>  },
     { "performAtomic", Wrap_Data::performAtomic  }
 };
 // clang-format on
@@ -102,7 +102,7 @@ namespace love
         return luax_checktype<Data>(L, idx);
     }
 
-    int data_open(lua_State* L)
+    int open_data(lua_State* L)
     {
         return luax_register_type(L, &Data::type, Wrap_Data::functions);
     }

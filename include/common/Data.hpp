@@ -2,7 +2,8 @@
 
 #include "common/Object.hpp"
 
-#include <cstddef>
+#include <stddef.h>
+
 #include <mutex>
 
 namespace love

@@ -6,8 +6,7 @@ namespace love
 {
     static constexpr int SOC_BUFFER_SIZE  = 0x100000;
     static constexpr int SOC_BUFFER_ALIGN = 0x1000;
-
-    static inline uint32_t* socBuffer = nullptr;
+    inline uint32_t* socBuffer            = nullptr;
 
     void preInit();
 

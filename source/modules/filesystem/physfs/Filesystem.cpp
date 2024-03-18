@@ -522,12 +522,20 @@ namespace love
 
     std::string Filesystem::getSourceBaseDirectory()
     {
-        const auto path = std::filesystem::path(this->source);
+        size_t length = this->source.length();
 
-        if (!path.has_parent_path())
+        if (length == 0)
             return std::string {};
 
-        return path.parent_path().string();
+        size_t base_end = this->source.find_last_of('/', length - 2);
+
+        if (base_end == std::string::npos)
+            return std::string {};
+
+        if (base_end == 0)
+            base_end = 1;
+
+        return this->source.substr(0, base_end);
     }
 
     std::string Filesystem::getRealDirectory(const char* filename) const

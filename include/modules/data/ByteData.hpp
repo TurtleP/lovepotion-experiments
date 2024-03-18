@@ -19,7 +19,8 @@ namespace love
 
         ByteData(const ByteData& other);
 
-        virtual ~ByteData();
+        virtual ~ByteData()
+        {}
 
         ByteData* clone() const override;
 

@@ -57,33 +57,41 @@ class MapT
     }
 
     /**
-     * @param key The key to search for
      * @brief Get the value associated with the key
-     * @return std::optional<V> containing the value if the key exists, std::nullopt otherwise
+     * @param key The key to search for
+     * @param value The output value
+     * @return bool true if the key exists, false otherwise
      */
-    constexpr std::optional<V> getValue(const K& key) const
+    constexpr bool getValue(const K& key, V& value) const
     {
         auto it = this->find(key, &Entry::first);
 
         if (it != this->items.end())
-            return it->second;
+        {
+            value = it->second;
+            return true;
+        }
 
-        return std::nullopt;
+        return false;
     }
 
     /**
      * @param value The value to search for
+     * @param key The output key
      * @brief Get the key associated with the value
-     * @return std::optional<K> containing the key if the value exists, std::nullopt otherwise
+     * @return bool true if the value exists, false otherwise
      */
-    constexpr std::optional<K> getKey(const V& value) const
+    constexpr bool getKey(const V& value, K& key) const
     {
         auto it = this->find(value, &Entry::second);
 
         if (it != this->items.end())
-            return it->first;
+        {
+            key = it->first;
+            return true;
+        }
 
-        return std::nullopt;
+        return false;
     }
 
     /**
@@ -129,7 +137,7 @@ class MapT
      * @param value The value that was not found
      * @return std::string containing the expected values (comma separated)
      */
-    constexpr std::string expected(const char* type, const char* value) const
+    constexpr std::string expected(std::string_view type, std::string_view value) const
     {
         auto concat = [](std::string&& a, const Entry& b) -> std::string& {
             return a.empty() ? a.append(b.first) : a.append(", ").append(b.first);
@@ -159,21 +167,11 @@ using StringMap = MapT<std::string_view, V, N>;
     };                                                                                       \
     static inline bool getConstant(const char* in, type& out)                                \
     {                                                                                        \
-        std::optional<type> result {};                                                       \
-                                                                                             \
-        if ((result = name.getValue(in)))                                                    \
-            out = *result;                                                                   \
-                                                                                             \
-        return result.has_value();                                                           \
+        return name.getValue(in, out);                                                       \
     }                                                                                        \
-    static inline bool getConstant(type in, std::string_view out)                            \
+    static inline bool getConstant(type in, std::string_view& out)                           \
     {                                                                                        \
-        std::optional<std::string_view> result {};                                           \
-                                                                                             \
-        if ((result = name.getKey(in)))                                                      \
-            out = *result;                                                                   \
-                                                                                             \
-        return result.has_value();                                                           \
+        return name.getKey(in, out);                                                         \
     }
 // clang-format on
 

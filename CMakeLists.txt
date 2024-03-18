@@ -42,7 +42,7 @@ message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "COMPILE_OPTIMIZATION: ${COMPILE_OPTIMIZATION}")
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall -Wno-psabi -Wextra -Wconversion
+    -Wall -Wno-psabi -Wextra
     ${COMPILE_OPTIMIZATION}
 
     $<$<COMPILE_LANGUAGE:CXX>:-fexceptions -fno-rtti>
@@ -71,7 +71,6 @@ if(NINTENDO_3DS)
         ICON        ${APP_ICON}
     )
 
-
     # Specify that the executable is a 3DSX file
     ctr_create_3dsx(${PROJECT_NAME}
         SMDH  ${PROJECT_NAME}.smdh
@@ -79,6 +78,22 @@ if(NINTENDO_3DS)
     )
 
     set(APP_LIBS citro3d)
+endif()
+
+if (NINTENDO_SWITCH)
+    add_subdirectory(platform/hac)
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        __CONSOLE__="Switch" __OS__="Horizon"
+    )
+endif()
+
+if (NINTENDO_WII_U)
+    add_subdirectory(platform/cafe)
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        __CONSOLE__="Wii U" __OS__="Cafe" __LOVE_BIG_ENDIAN__
+    )
 endif()
 
 # find PkgConfig for liblz4, libmpg123
@@ -119,6 +134,7 @@ include_directories(
 
 # find source -type f -name \*.cpp | clip
 target_sources(${PROJECT_NAME} PRIVATE
+source/common/b64.cpp
 source/common/Data.cpp
 source/common/luax.cpp
 source/common/Message.cpp
@@ -129,9 +145,16 @@ source/common/types.cpp
 source/common/Variant.cpp
 source/main.cpp
 source/modules/data/ByteData.cpp
+source/modules/data/CompressedData.cpp
+source/modules/data/DataModule.cpp
 source/modules/data/DataView.cpp
+source/modules/data/misc/Compressor.cpp
+source/modules/data/misc/HashFunction.cpp
+source/modules/data/wrap_ByteData.cpp
+source/modules/data/wrap_CompressedData.cpp
 source/modules/data/wrap_Data.cpp
 source/modules/data/wrap_DataModule.cpp
+source/modules/data/wrap_DataView.cpp
 source/modules/event/Event.cpp
 source/modules/event/wrap_Event.cpp
 source/modules/filesystem/FileData.cpp
