@@ -14,27 +14,27 @@ namespace love
         this->create();
 
         if (clear)
-            std::fill_n(this->data.get(), size, 0);
+            std::fill_n(this->data, size, 0);
     }
 
     ByteData::ByteData(const void* data, size_t size) : size(size)
     {
         this->create();
 
-        if (data)
-            std::copy_n((const char*)data, size, this->data.get());
+        if (data != nullptr)
+            std::copy_n((const char*)data, size, this->data);
     }
 
     ByteData::ByteData(void* data, size_t size, bool owned) : size(size)
     {
         if (owned)
-            this->data.reset((char*)data);
+            this->data = (char*)data;
         else
         {
             this->create();
 
-            if (data)
-                std::copy_n((const char*)data, size, this->data.get());
+            if (data != nullptr)
+                std::copy_n((const char*)data, size, this->data);
         }
     }
 
@@ -43,7 +43,12 @@ namespace love
         this->create();
 
         if (other.data)
-            std::copy_n(other.data.get(), this->size, this->data.get());
+            std::copy_n(other.data, this->size, this->data);
+    }
+
+    ByteData::~ByteData()
+    {
+        delete[] this->data;
     }
 
     void ByteData::create()
@@ -53,7 +58,7 @@ namespace love
 
         try
         {
-            this->data = std::make_unique<char[]>(this->size);
+            this->data = new char[this->size];
         }
         catch (std::bad_alloc& e)
         {
@@ -68,7 +73,7 @@ namespace love
 
     void* ByteData::getData() const
     {
-        return this->data.get();
+        return this->data;
     }
 
     size_t ByteData::getSize() const

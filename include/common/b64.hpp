@@ -7,8 +7,8 @@
 
 namespace love
 {
-    std::string b64_encode(const char* source, size_t sourceLength, size_t lineLength,
-                           size_t& destinationLength);
+    char* b64_encode(const char* source, size_t sourceLength, size_t lineLength,
+                     size_t& destinationLength);
 
-    std::unique_ptr<uint8_t[]> b64_decode(const char* source, size_t sourceLength, size_t& size);
+    char* b64_decode(const char* source, size_t sourceLength, size_t& size);
 } // namespace love

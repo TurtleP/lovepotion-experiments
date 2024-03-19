@@ -19,8 +19,8 @@ namespace love
         out[3] = (char)(len > 2 ? cb64[(int)(in[2] & 0x3F)] : '=');
     }
 
-    std::string b64_encode(const char* source, size_t sourceLength, size_t lineLength,
-                           size_t& destinationLength)
+    char* b64_encode(const char* source, size_t sourceLength, size_t lineLength,
+                     size_t& destinationLength)
     {
         if (lineLength == 0)
             lineLength = std::numeric_limits<size_t>::max();
@@ -36,11 +36,11 @@ namespace love
         if (destinationLength == 0)
             return nullptr;
 
-        std::string destination {};
+        char* destination = nullptr;
 
         try
         {
-            destination = std::string(destinationLength + 1, '\0');
+            destination = new char[destinationLength + 1];
         }
         catch (std::bad_alloc&)
         {
@@ -98,22 +98,22 @@ namespace love
         out[2] = (char)(((in[2] << 6) & 0xC0) | in[3]);
     }
 
-    std::unique_ptr<uint8_t[]> b64_decode(const char* source, size_t sourceLength, size_t& size)
+    char* b64_decode(const char* source, size_t sourceLength, size_t& size)
     {
         size_t paddedSize = (sourceLength / 4) * 3;
 
-        std::unique_ptr<uint8_t[]> destination {};
+        char* destination = nullptr;
 
         try
         {
-            destination = std::make_unique<uint8_t[]>(paddedSize);
+            destination = new char[paddedSize];
         }
         catch (std::bad_alloc&)
         {
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        auto destCopy = destination.get();
+        auto destCopy = destination;
 
         char in[4]  = { 0 };
         char out[3] = { 0 };
@@ -157,7 +157,7 @@ namespace love
             }
         }
 
-        size = (size_t)(ptrdiff_t)(destCopy - destination.get());
+        size = (size_t)(ptrdiff_t)(destCopy - destination);
         return destination;
     }
 } // namespace love

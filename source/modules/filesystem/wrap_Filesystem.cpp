@@ -666,6 +666,47 @@ int Wrap_Filesystem::setRequirePath(lua_State* L)
     return 0;
 }
 
+int Wrap_Filesystem::getCRequirePath(lua_State* L)
+{
+    std::string path;
+    bool separator = false;
+
+    for (const auto& element : instance()->getCRequirePath())
+    {
+        if (separator)
+            path += ";";
+        else
+            separator = true;
+
+        path += element;
+    }
+
+    luax_pushstring(L, path.c_str());
+    return 1;
+}
+
+int Wrap_Filesystem::setCRequirePath(lua_State* L)
+{
+    std::string element = luax_checkstring(L, 1);
+    auto& requirePath   = instance()->getCRequirePath();
+
+    requirePath.clear();
+
+    size_t startPos = 0;
+    size_t endPos   = element.find(';');
+
+    while (endPos != std::string::npos)
+    {
+        requirePath.push_back(element.substr(startPos, endPos - startPos));
+        startPos = endPos + 1;
+        endPos   = element.find(';', startPos);
+    }
+
+    requirePath.push_back(element.substr(startPos));
+
+    return 0;
+}
+
 static int loader(lua_State* L)
 {
     std::string moduleName = luaL_checkstring(L, 1);
@@ -844,7 +885,9 @@ static constexpr luaL_Reg functions[]
     { "getFullCommonPath",      Wrap_Filesystem::getFullCommonPath      },
     { "getInfo",                Wrap_Filesystem::getInfo                },
     { "setSymlinksEnabled",     Wrap_Filesystem::setSymlinksEnabled     },
-    { "areSymlinksEnabled",     Wrap_Filesystem::areSymlinksEnabled     }
+    { "areSymlinksEnabled",     Wrap_Filesystem::areSymlinksEnabled     },
+    { "getCRequirePath",        Wrap_Filesystem::getCRequirePath        },
+    { "setCRequirePath",        Wrap_Filesystem::setCRequirePath        }
 };
 
 static constexpr lua_CFunction types[] =

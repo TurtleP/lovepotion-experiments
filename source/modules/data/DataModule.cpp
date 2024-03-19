@@ -10,14 +10,23 @@ namespace
 {
     static constexpr char hexChars[17] = "0123456789abcdef";
 
-    std::string bytesToHex(const uint8_t* source, size_t sourceLength, size_t destinationLength)
+    char* bytesToHex(const uint8_t* source, size_t sourceLength, size_t destinationLength)
     {
         destinationLength = sourceLength * 2;
 
         if (destinationLength == 0)
             return nullptr;
 
-        std::string destination(destinationLength + 1, '\0');
+        char* destination = nullptr;
+
+        try
+        {
+            destination = new char[destinationLength + 1];
+        }
+        catch (std::bad_alloc& e)
+        {
+            throw love::Exception(E_OUT_OF_MEMORY);
+        }
 
         for (size_t index = 0; index < sourceLength; index++)
         {
@@ -27,6 +36,7 @@ namespace
             destination[index * 2 + 1] = hexChars[byte & 0x0F];
         }
 
+        destination[destinationLength] = '\0';
         return destination;
     }
 
@@ -42,8 +52,7 @@ namespace
         return 0;
     }
 
-    std::unique_ptr<uint8_t[]> hexToBytes(const char* source, size_t sourceLength,
-                                          size_t& destinationLength)
+    uint8_t* hexToBytes(const char* source, size_t sourceLength, size_t& destinationLength)
     {
         if (sourceLength >= 2 && source[0] == '0' && (source[1] == 'x' || source[1] == 'X'))
         {
@@ -56,11 +65,11 @@ namespace
         if (destinationLength == 0)
             return nullptr;
 
-        std::unique_ptr<uint8_t[]> destination;
+        uint8_t* destination = nullptr;
 
         try
         {
-            destination = std::make_unique<uint8_t[]>(destinationLength);
+            destination = new uint8_t[destinationLength];
         }
         catch (std::bad_alloc&)
         {
@@ -131,8 +140,8 @@ namespace love
             return bytes;
         }
 
-        std::string encode(EncodeFormat format, const void* source, size_t size,
-                           size_t& destinationLength, size_t lineLength)
+        char* encode(EncodeFormat format, const void* source, size_t size,
+                     size_t& destinationLength, size_t lineLength)
         {
             switch (format)
             {
@@ -140,12 +149,12 @@ namespace love
                 case ENCODE_BASE64:
                     return b64_encode((const char*)source, size, lineLength, destinationLength);
                 case ENCODE_HEX:
-                    return bytesToHex((const uint8_t*)source, size, destinationLength).c_str();
+                    return bytesToHex((const uint8_t*)source, size, destinationLength);
             }
         }
 
-        std::unique_ptr<uint8_t[]> decode(EncodeFormat format, const char* source, size_t size,
-                                          size_t& destinationLength)
+        char* decode(EncodeFormat format, const char* source, size_t size,
+                     size_t& destinationLength)
         {
             switch (format)
             {
@@ -153,7 +162,7 @@ namespace love
                 case ENCODE_BASE64:
                     return b64_decode(source, size, destinationLength);
                 case ENCODE_HEX:
-                    return hexToBytes(source, size, destinationLength);
+                    return (char*)hexToBytes(source, size, destinationLength);
             }
         }
 

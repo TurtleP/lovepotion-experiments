@@ -19,8 +19,7 @@ namespace love
 
         ByteData(const ByteData& other);
 
-        virtual ~ByteData()
-        {}
+        virtual ~ByteData();
 
         ByteData* clone() const override;
 
@@ -31,7 +30,7 @@ namespace love
       private:
         void create();
 
-        std::unique_ptr<char[]> data;
+        char* data;
         size_t size;
     };
 } // namespace love

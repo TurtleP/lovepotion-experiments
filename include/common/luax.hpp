@@ -49,7 +49,8 @@ namespace love
 
     static constexpr uint64_t LUAX_MAX_OBJECT_KEY = 0x20000000000000ULL;
 
-    static constexpr const char* MAIN_THREAD_KEY = "_love_mainthread";
+    static constexpr const char* MAIN_THREAD_KEY      = "_love_mainthread";
+    static constexpr const char* OBJECTS_REGISTRY_KEY = "_loveobjects";
 
     using ObjectKey = uint64_t;
 

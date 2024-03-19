@@ -38,11 +38,11 @@ namespace love
         char* decompress(Compressor::Format format, const char* bytes, size_t size,
                          size_t& rawSize);
 
-        std::string encode(EncodeFormat format, const void* source, size_t size,
-                           size_t& destinationLength, size_t lineLength = 0);
+        char* encode(EncodeFormat format, const void* source, size_t size,
+                     size_t& destinationLength, size_t lineLength = 0);
 
-        std::unique_ptr<uint8_t[]> decode(EncodeFormat format, const char* source, size_t size,
-                                          size_t& destinationLength);
+        char* decode(EncodeFormat format, const char* source, size_t size,
+                     size_t& destinationLength);
 
         std::string hash(HashFunction::Function function, Data* input);
 

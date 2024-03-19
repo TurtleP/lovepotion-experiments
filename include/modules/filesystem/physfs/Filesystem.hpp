@@ -91,6 +91,8 @@ namespace love
 
         std::vector<std::string>& getRequirePath();
 
+        std::vector<std::string>& getCRequirePath();
+
       private:
         struct CommonPathMountInfo
         {
@@ -114,6 +116,7 @@ namespace love
         bool fusedSet;
 
         std::vector<std::string> requirePath;
+        std::vector<std::string> cRequirePath;
 
         std::vector<std::string> allowedPaths;
 

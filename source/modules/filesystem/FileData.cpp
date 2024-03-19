@@ -26,7 +26,7 @@ namespace love
 
         if (path.has_extension())
         {
-            this->extension = path.extension().c_str();
+            this->extension = path.extension().string().substr(1);
             this->name      = path.filename().c_str();
         }
         else

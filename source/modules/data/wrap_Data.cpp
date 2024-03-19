@@ -8,16 +8,17 @@ int Wrap_Data::getString(lua_State* L)
     auto* self     = luax_checkdata(L, 1);
     int64_t offset = (int64_t)luaL_optnumber(L, 2, 0);
 
-    int64_t size = (lua_isnoneornil(L, 3)) ? ((int64_t)self->getSize() - offset)
-                                           : (int64_t)luaL_checknumber(L, 3);
+    int64_t size = lua_isnoneornil(L, 3) ? ((int64_t)self->getSize() - offset)
+                                         : (int64_t)luaL_checknumber(L, 3);
 
     if (size <= 0)
         return luaL_error(L, E_INVALID_SIZE_PARAMETER);
 
-    if (offset < 0 || offset + size >= (int64_t)self->getSize())
+    if (offset < 0 || offset + size > (int64_t)self->getSize())
         return luaL_error(L, E_INVALID_OFFSET_AND_SIZE);
 
-    lua_pushlstring(L, (const char*)self->getData() + offset, size);
+    auto* data = (const char*)self->getData() + offset;
+    lua_pushlstring(L, data, size);
 
     return 1;
 }
@@ -36,6 +37,15 @@ int Wrap_Data::getPointer(lua_State* L)
     auto* self = luax_checkdata(L, 1);
 
     lua_pushlightuserdata(L, self->getData());
+
+    return 1;
+}
+
+int Wrap_Data::getFFIPointer(lua_State* L)
+{
+    auto* _ = luax_checkdata(L, 1);
+
+    lua_pushnil(L);
 
     return 1;
 }
@@ -78,7 +88,7 @@ static int wrap_Data_getT(lua_State* L)
 }
 
 // clang-format off
-luaL_Reg Wrap_Data::functions[0x0C] =
+luaL_Reg Wrap_Data::functions[] =
 {
     { "getPointer",    Wrap_Data::getPointer     },
     { "getSize",       Wrap_Data::getSize        },
@@ -91,7 +101,8 @@ luaL_Reg Wrap_Data::functions[0x0C] =
 	{ "getUInt16",     wrap_Data_getT<uint16_t>  },
 	{ "getInt32",      wrap_Data_getT<int32_t>   },
 	{ "getUInt32",     wrap_Data_getT<uint32_t>  },
-    { "performAtomic", Wrap_Data::performAtomic  }
+    { "performAtomic", Wrap_Data::performAtomic  },
+    { "getFFIPointer", Wrap_Data::getFFIPointer  }
 };
 // clang-format on
 

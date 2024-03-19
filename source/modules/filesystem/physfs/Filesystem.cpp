@@ -92,7 +92,8 @@ namespace love
         commonPathMountInfo(),
         saveDirectoryNeedsMounting(false)
     {
-        this->requirePath = { "?.lua", "?/init.lua" };
+        this->requirePath  = { "?.lua", "?/init.lua" };
+        this->cRequirePath = { "??" };
     }
 
     Filesystem::~Filesystem()
@@ -678,5 +679,10 @@ namespace love
     std::vector<std::string>& Filesystem::getRequirePath()
     {
         return this->requirePath;
+    }
+
+    std::vector<std::string>& Filesystem::getCRequirePath()
+    {
+        return this->cRequirePath;
     }
 } // namespace love

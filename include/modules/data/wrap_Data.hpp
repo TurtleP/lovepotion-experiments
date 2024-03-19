@@ -16,9 +16,11 @@ namespace Wrap_Data
 
     int getPointer(lua_State* L);
 
+    int getFFIPointer(lua_State* L);
+
     int getSize(lua_State* L);
 
     int performAtomic(lua_State* L);
 
-    extern luaL_Reg functions[0x0C];
+    extern luaL_Reg functions[13];
 } // namespace Wrap_Data

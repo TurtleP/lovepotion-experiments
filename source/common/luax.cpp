@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstring>
 
+#include <utility/logfile.hpp>
+
 #define LOVE_UNUSED(x) (void)sizeof(x)
 
 namespace love
@@ -112,7 +114,7 @@ namespace love
             case REGISTRY_MODULES:
                 return luax_insistlove(L, "_modules");
             case REGISTRY_OBJECTS:
-                return luax_insist(L, LUA_REGISTRYINDEX, "_loveobjects");
+                return luax_insist(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
             default:
                 return luaL_error(L, "Attempted to use invalid registry.");
         }
@@ -126,7 +128,7 @@ namespace love
                 return luax_getlove(L, "_modules");
             case REGISTRY_OBJECTS:
             {
-                lua_getfield(L, LUA_REGISTRYINDEX, "_loveobjects");
+                lua_getfield(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
                 return 1;
             }
             default:
@@ -233,11 +235,11 @@ namespace love
     {
         Proxy* proxy = (Proxy*)lua_touserdata(L, 1);
 
-        if (!proxy->object)
-            return 0;
-
-        proxy->object->release();
-        proxy->object = nullptr;
+        if (proxy->object != nullptr)
+        {
+            proxy->object->release();
+            proxy->object = nullptr;
+        }
 
         return 0;
     }
@@ -245,9 +247,6 @@ namespace love
     static int w__tostring(lua_State* L)
     {
         Proxy* proxy = (Proxy*)lua_touserdata(L, 1);
-
-        if (!proxy->object)
-            return 0;
 
         const char* name = lua_tostring(L, lua_upvalueindex(1));
         lua_pushfstring(L, "%s: %p", name, proxy->object);
@@ -265,13 +264,12 @@ namespace love
     static int w_typeOf(lua_State* L)
     {
         Proxy* proxy = (Proxy*)lua_touserdata(L, 1);
+        Type* type   = luax_type(L, 2);
 
-        if (!proxy->object)
-            return 0;
-
-        Type* type = luax_type(L, 2);
-
-        (!type) ? luax_pushboolean(L, false) : luax_pushboolean(L, proxy->type->isA(*type));
+        if (!type)
+            luax_pushboolean(L, false);
+        else
+            luax_pushboolean(L, proxy->type->isA(*type));
 
         return 1;
     }
@@ -352,10 +350,10 @@ namespace love
 
         Proxy* userdata = (Proxy*)lua_touserdata(L, index);
 
-        if (userdata->type == nullptr)
+        if (userdata->type != nullptr)
+            return userdata->type->isA(type);
+        else
             return false;
-
-        return userdata->type->isA(type);
     }
 
     Proxy* luax_tryextractproxy(lua_State* L, int index)
@@ -374,14 +372,13 @@ namespace love
     void luax_rawnewtype(lua_State* L, Type& type, Object* object)
     {
         Proxy* proxy = (Proxy*)lua_newuserdata(L, sizeof(Proxy));
-
-        proxy->object = object;
+        object->retain();
 
         proxy->object = object;
         proxy->type   = &type;
 
         const char* name = type.getName();
-        luaL_getmetatable(L, name);
+        luaL_newmetatable(L, name);
 
         lua_getfield(L, -1, "__gc");
         bool has_gc = !lua_isnoneornil(L, -1);
@@ -413,6 +410,8 @@ namespace love
         }
 
         ObjectKey key = luax_computeobjectkey(L, object);
+        luax_pushobjectkey(L, key);
+
         lua_gettable(L, -2);
 
         if (lua_type(L, -1) != LUA_TUSERDATA)
@@ -758,7 +757,7 @@ namespace love
             lua_setfield(L, -2, "__mode");
 
             lua_setmetatable(L, -2);
-            lua_setfield(L, LUA_REGISTRYINDEX, "_loveobjects");
+            lua_setfield(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
         }
         else
             lua_pop(L, 1);

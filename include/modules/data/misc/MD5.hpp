@@ -55,9 +55,9 @@ namespace love
             *(((uint8_t*)padded) + length) = 0x80;
 
             uint64_t bitLength = length * 8;
-            std::copy_n((uint8_t*)&bitLength, 8, ((uint8_t*)padded) + paddedLength - 8);
+            std::memcpy(((uint8_t*)padded) + paddedLength - 8, &bitLength, 8);
 
-            for (uint64_t i = 0; i < paddedLength; i += 64)
+            for (uint64_t i = 0; i < paddedLength / 4; i += 16)
             {
                 uint32_t* chunk = &padded[i];
 

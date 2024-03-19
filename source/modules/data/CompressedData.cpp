@@ -15,20 +15,20 @@ namespace love
     {
         if (own)
         {
-            this->data.reset(data);
+            this->data = data;
         }
         else
         {
             try
             {
-                this->data = std::make_unique<char[]>(size);
+                this->data = new char[this->dataSize];
             }
             catch (std::bad_alloc&)
             {
                 throw love::Exception(E_OUT_OF_MEMORY);
             }
 
-            std::copy_n(data, size, this->data.get());
+            std::copy_n(data, dataSize, this->data);
         }
     }
 
@@ -41,14 +41,14 @@ namespace love
     {
         try
         {
-            this->data = std::make_unique<char[]>(this->dataSize);
+            this->data = new char[this->dataSize];
         }
         catch (std::bad_alloc&)
         {
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        std::copy_n(other.data.get(), this->dataSize, this->data.get());
+        std::copy_n(other.data, this->dataSize, this->data);
     }
 
     CompressedData* CompressedData::clone() const
@@ -68,7 +68,7 @@ namespace love
 
     void* CompressedData::getData() const
     {
-        return this->data.get();
+        return this->data;
     }
 
     size_t CompressedData::getSize() const

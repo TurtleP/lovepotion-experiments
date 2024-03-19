@@ -24,7 +24,7 @@ int Wrap_DataModule::compress(lua_State* L)
     auto format            = Compressor::FORMAT_LZ4;
 
     if (!Compressor::getConstant(formatName, format))
-        luax_enumerror(L, "compressed data format", Compressor::formats, formatName);
+        return luax_enumerror(L, "compressed data format", Compressor::formats, formatName);
 
     int level         = luaL_optinteger(L, 4, -1);
     size_t rawSize    = 0;
@@ -55,14 +55,14 @@ int Wrap_DataModule::decompress(lua_State* L)
 {
     auto containerType = luax_checkcontainertype(L, 1);
 
-    char* bytes = nullptr;
-    size_t size = 0;
+    char* rawBytes = nullptr;
+    size_t size    = 0;
 
     if (luax_istype(L, 2, CompressedData::type))
     {
         auto* data = luax_checkcompresseddata(L, 2);
         size       = data->getDecompressedSize();
-        luax_catchexcept(L, [&] { bytes = data::decompress(data, size); });
+        luax_catchexcept(L, [&] { rawBytes = data::decompress(data, size); });
     }
     else
     {
@@ -70,35 +70,36 @@ int Wrap_DataModule::decompress(lua_State* L)
         const char* formatString = luaL_checkstring(L, 2);
 
         if (!Compressor::getConstant(formatString, format))
-            luax_enumerror(L, "compressed data format", Compressor::formats, formatString);
+            return luax_enumerror(L, "compressed data format", Compressor::formats, formatString);
 
         size_t compressedSize = 0;
-        const char* bytes     = nullptr;
+        const char* cBytes    = nullptr;
 
         if (luax_istype(L, 3, Data::type))
         {
             auto* data     = luax_checktype<Data>(L, 3);
-            bytes          = (const char*)data->getData();
+            cBytes         = (const char*)data->getData();
             compressedSize = data->getSize();
         }
         else
-            bytes = luaL_checklstring(L, 3, &compressedSize);
+            cBytes = luaL_checklstring(L, 3, &compressedSize);
 
-        luax_catchexcept(L, [&] { bytes = data::decompress(format, bytes, compressedSize, size); });
+        luax_catchexcept(
+            L, [&] { rawBytes = data::decompress(format, cBytes, compressedSize, size); });
     }
 
     if (containerType == data::CONTAINER_DATA)
     {
         ByteData* data = nullptr;
-        luax_catchexcept(L, [&] { data = instance()->newByteData(bytes, size); });
+        luax_catchexcept(L, [&] { data = instance()->newByteData(rawBytes, size); });
 
         luax_pushtype(L, data);
         data->release();
     }
     else
     {
-        lua_pushlstring(L, bytes, size);
-        delete[] bytes;
+        lua_pushlstring(L, rawBytes, size);
+        delete[] rawBytes;
     }
 
     return 1;
@@ -111,7 +112,7 @@ int Wrap_DataModule::encode(lua_State* L)
 
     data::EncodeFormat format = data::ENCODE_MAX_ENUM;
     if (!data::getConstant(formatName, format))
-        luax_enumerror(L, "encode format", data::encodeFormats, formatName);
+        return luax_enumerror(L, "encode format", data::encodeFormats, formatName);
 
     size_t srcLength   = 0;
     const char* source = nullptr;
@@ -127,18 +128,18 @@ int Wrap_DataModule::encode(lua_State* L)
 
     size_t lineLength = luaL_optinteger(L, 4, 0);
 
-    size_t length = 0;
-    std::string dst {};
+    size_t length     = 0;
+    char* destination = nullptr;
 
-    luax_catchexcept(L, [&] { dst = data::encode(format, source, srcLength, lineLength, length); });
+    luax_catchexcept(
+        L, [&] { destination = data::encode(format, source, srcLength, lineLength, length); });
 
     if (containerType == data::CONTAINER_DATA)
     {
         ByteData* data = nullptr;
 
-        if (!dst.empty())
-            luax_catchexcept(
-                L, [&] { data = instance()->newByteData((void*)dst.c_str(), length, true); });
+        if (destination != nullptr)
+            luax_catchexcept(L, [&] { data = instance()->newByteData(destination, length, true); });
         else
             data = instance()->newByteData(0);
 
@@ -147,8 +148,8 @@ int Wrap_DataModule::encode(lua_State* L)
     }
     else
     {
-        if (!dst.empty())
-            lua_pushlstring(L, dst.c_str(), length);
+        if (destination != nullptr)
+            lua_pushlstring(L, destination, length);
         else
             lua_pushstring(L, "");
     }
@@ -163,7 +164,7 @@ int Wrap_DataModule::decode(lua_State* L)
 
     data::EncodeFormat format = data::ENCODE_MAX_ENUM;
     if (!data::getConstant(formatName, format))
-        luax_enumerror(L, "decode format", data::encodeFormats, formatName);
+        return luax_enumerror(L, "decode format", data::encodeFormats, formatName);
 
     size_t srcLength   = 0;
     const char* source = nullptr;
@@ -177,18 +178,17 @@ int Wrap_DataModule::decode(lua_State* L)
     else
         source = luaL_checklstring(L, 3, &srcLength);
 
-    size_t dstLength                       = 0;
-    std::unique_ptr<uint8_t[]> destination = nullptr;
+    size_t dstLength = 0;
+    char* dst        = nullptr;
 
-    luax_catchexcept(L, [&] { destination = data::decode(format, source, srcLength, dstLength); });
+    luax_catchexcept(L, [&] { dst = data::decode(format, source, srcLength, dstLength); });
 
     if (containerType == data::CONTAINER_DATA)
     {
         ByteData* data = nullptr;
 
-        if (destination)
-            luax_catchexcept(
-                L, [&] { data = instance()->newByteData(destination.get(), dstLength, true); });
+        if (dst != nullptr)
+            luax_catchexcept(L, [&] { data = instance()->newByteData(dst, dstLength, true); });
         else
             data = instance()->newByteData(0);
 
@@ -197,10 +197,12 @@ int Wrap_DataModule::decode(lua_State* L)
     }
     else
     {
-        if (destination)
-            lua_pushlstring(L, (const char*)destination.get(), dstLength);
+        if (dst != nullptr)
+            lua_pushlstring(L, dst, dstLength);
         else
             lua_pushstring(L, "");
+
+        delete[] dst;
     }
 
     return 1;
@@ -214,7 +216,7 @@ int Wrap_DataModule::hash(lua_State* L)
     const char* formatString = luaL_checkstring(L, 2);
 
     if (!HashFunction::getConstant(formatString, function))
-        luax_enumerror(L, "hash function", HashFunction::hashFunctions, formatString);
+        return luax_enumerror(L, "hash function", HashFunction::hashFunctions, formatString);
 
     HashFunction::Value value {};
     if (lua_isstring(L, 3))
@@ -326,7 +328,7 @@ int Wrap_DataModule::newByteData(lua_State* L)
             return luaL_error(L, "Offset argument must not be negative.");
 
         lua_Integer size = luaL_optinteger(L, 3, data->getSize() - offset);
-        if (size < 0)
+        if (size <= 0)
             return luaL_error(L, "Size argument must be greater than zero.");
         else if ((size_t)(offset + size) > data->getSize())
             return luaL_error(L, E_OFFSET_AND_SIZE_ARGS_FIT_WITHIN_DATA);

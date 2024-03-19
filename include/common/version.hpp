@@ -78,5 +78,5 @@ namespace love
     static constexpr Version LOVE_FRAMEWORK(__LOVE_VERSION__);
 
     static constexpr const char* CODENAME                     = "";
-    static constexpr std::array<const char*, 1> COMPATIBILITY = { __APP_VERSION__ };
+    static constexpr std::array<const char*, 1> COMPATIBILITY = { __LOVE_VERSION__ };
 } // namespace love

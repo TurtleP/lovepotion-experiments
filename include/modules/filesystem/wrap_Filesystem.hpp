@@ -98,5 +98,9 @@ namespace Wrap_Filesystem
 
     int setRequirePath(lua_State* L);
 
+    int getCRequirePath(lua_State* L);
+
+    int setCRequirePath(lua_State* L);
+
     int open(lua_State* L);
 } // namespace Wrap_Filesystem
