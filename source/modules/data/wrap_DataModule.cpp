@@ -91,9 +91,9 @@ int Wrap_DataModule::decompress(lua_State* L)
     if (containerType == data::CONTAINER_DATA)
     {
         ByteData* data = nullptr;
-        luax_catchexcept(L, [&] { data = instance()->newByteData(rawBytes, size); });
+        luax_catchexcept(L, [&] { data = instance()->newByteData(rawBytes, size, true); });
 
-        luax_pushtype(L, data);
+        luax_pushtype(L, Data::type, data);
         data->release();
     }
     else
