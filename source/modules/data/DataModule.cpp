@@ -44,8 +44,10 @@ namespace
     {
         if (x >= '0' && x <= '9')
             return (uint8_t)(x - '0');
+
         if (x >= 'A' && x <= 'F')
             return (uint8_t)(x - 'A' + 0x0A);
+
         if (x >= 'a' && x <= 'f')
             return (uint8_t)(x - 'a' + 0x0A);
 
@@ -76,7 +78,7 @@ namespace
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        for (size_t index = 0; index < sourceLength; index++)
+        for (size_t index = 0; index < destinationLength; index++)
         {
             destination[index] = nibble(source[index * 2]) << 4;
 

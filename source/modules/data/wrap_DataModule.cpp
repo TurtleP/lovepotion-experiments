@@ -128,18 +128,18 @@ int Wrap_DataModule::encode(lua_State* L)
 
     size_t lineLength = luaL_optinteger(L, 4, 0);
 
-    size_t length     = 0;
-    char* destination = nullptr;
+    size_t dstLength = 0;
+    char* dst        = nullptr;
 
-    luax_catchexcept(
-        L, [&] { destination = data::encode(format, source, srcLength, lineLength, length); });
+    luax_catchexcept(L,
+                     [&] { dst = data::encode(format, source, srcLength, dstLength, lineLength); });
 
     if (containerType == data::CONTAINER_DATA)
     {
         ByteData* data = nullptr;
 
-        if (destination != nullptr)
-            luax_catchexcept(L, [&] { data = instance()->newByteData(destination, length, true); });
+        if (dst != nullptr)
+            luax_catchexcept(L, [&] { data = instance()->newByteData(dst, dstLength, true); });
         else
             data = instance()->newByteData(0);
 
@@ -148,15 +148,17 @@ int Wrap_DataModule::encode(lua_State* L)
     }
     else
     {
-        if (destination != nullptr)
-            lua_pushlstring(L, destination, length);
+        if (dst != nullptr)
+            lua_pushlstring(L, dst, dstLength);
         else
             lua_pushstring(L, "");
+
+        delete[] dst;
     }
 
     return 1;
 }
-
+#include <utility/logfile.hpp>
 int Wrap_DataModule::decode(lua_State* L)
 {
     auto containerType     = luax_checkcontainertype(L, 1);

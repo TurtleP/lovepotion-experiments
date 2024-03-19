@@ -19,8 +19,7 @@ namespace love
         out[3] = (char)(len > 2 ? cb64[(int)(in[2] & 0x3F)] : '=');
     }
 
-    char* b64_encode(const char* source, size_t sourceLength, size_t lineLength,
-                     size_t& destinationLength)
+    char* b64_encode(const char* source, size_t sourceLength, size_t lineLength, size_t& dstLength)
     {
         if (lineLength == 0)
             lineLength = std::numeric_limits<size_t>::max();
@@ -31,30 +30,30 @@ namespace love
         size_t adjustment   = (sourceLength % 3) ? (3 - (sourceLength % 3)) : 0;
         size_t paddedLength = ((sourceLength + adjustment) / 3) * 4;
 
-        destinationLength = paddedLength + paddedLength / lineLength;
+        dstLength = paddedLength + paddedLength / lineLength;
 
-        if (destinationLength == 0)
+        if (dstLength == 0)
             return nullptr;
 
         char* destination = nullptr;
 
         try
         {
-            destination = new char[destinationLength + 1];
+            destination = new char[dstLength + 1];
         }
         catch (std::bad_alloc&)
         {
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        size_t destinationPosition = 0;
+        size_t dstPosition = 0;
 
         while (sourcePosition < sourceLength)
         {
             char in[3]  = { 0 };
             char out[4] = { 0 };
 
-            int length = 0;
+            int len = 0;
 
             for (int i = 0; i < 3; i++)
             {
@@ -62,32 +61,29 @@ namespace love
                     break;
 
                 in[i] = source[sourcePosition++];
-                length++;
+                len++;
             }
 
-            if (length > 0)
+            if (len > 0)
             {
-                b64_encode_block(in, out, length);
+                b64_encode_block(in, out, len);
 
-                for (int i = 0; i < 4 && destinationPosition < destinationLength;
-                     i++, destinationPosition++)
-                {
-                    destination[destinationPosition] = out[i];
-                }
+                for (int i = 0; i < 4 && dstPosition < dstLength; i++, dstPosition++)
+                    destination[dstPosition] = out[i];
 
                 blocksOut++;
             }
 
             if (blocksOut >= lineLength / 4 || sourcePosition >= sourceLength)
             {
-                if (blocksOut > 0 && destinationPosition < destinationLength)
-                    destination[destinationPosition++] = '\n';
+                if (blocksOut > 0 && dstPosition < dstLength)
+                    destination[dstPosition++] = '\n';
 
                 blocksOut = 0;
             }
         }
 
-        destination[destinationPosition] = '\0';
+        destination[dstPosition] = '\0';
         return destination;
     }
 
@@ -95,7 +91,7 @@ namespace love
     {
         out[0] = (char)(in[0] << 2 | in[1] >> 4);
         out[1] = (char)(in[1] << 4 | in[2] >> 2);
-        out[2] = (char)(((in[2] << 6) & 0xC0) | in[3]);
+        out[2] = (char)(((in[2] << 6) & 0xc0) | in[3]);
     }
 
     char* b64_decode(const char* source, size_t sourceLength, size_t& size)
@@ -113,34 +109,29 @@ namespace love
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        auto destCopy = destination;
+        auto* destCopy = destination;
 
         char in[4]  = { 0 };
         char out[3] = { 0 };
+        size_t i, len, srcpos = 0;
 
-        size_t i              = 0;
-        size_t length         = 0;
-        size_t sourcePosition = 0;
-
-        while (sourcePosition < sourceLength)
+        while (srcpos <= sourceLength)
         {
-            char v = 0;
-
-            for (length = 0, i = 0; i < 4 && sourcePosition <= sourceLength; i++)
+            for (len = 0, i = 0; i < 4 && srcpos <= sourceLength; i++)
             {
-                while (sourcePosition <= sourceLength && v == 0)
-                {
-                    v = source[sourcePosition++];
-                    v = (char)((v < 43 || v > 122) ? 0 : cd64[v - 43]);
+                char v = 0;
 
+                while (srcpos <= sourceLength && v == 0)
+                {
+                    v = source[srcpos++];
+                    v = (char)((v < 43 || v > 122) ? 0 : cd64[v - 43]);
                     if (v != 0)
                         v = (char)((v == '$') ? 0 : v - 61);
                 }
 
-                if (sourcePosition <= sourceLength)
+                if (srcpos <= sourceLength)
                 {
-                    length++;
-
+                    len++;
                     if (v != 0)
                         in[i] = (char)(v - 1);
                 }
@@ -148,11 +139,10 @@ namespace love
                     in[i] = 0;
             }
 
-            if (length)
+            if (len)
             {
                 b64_decode_block(in, out);
-
-                for (i = 0; i < length - 1; i++)
+                for (i = 0; i < len - 1; i++)
                     *(destCopy++) = out[i];
             }
         }
