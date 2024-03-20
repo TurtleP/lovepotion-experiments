@@ -25,7 +25,7 @@ namespace love
 
         bool setupWriteDirectory();
 
-        bool setIdentity(std::string_view identity, bool appendToPath = false);
+        bool setIdentity(const char* identity, bool appendToPath = false);
 
         std::string getIdentity() const;
 

@@ -32,6 +32,8 @@ namespace Wrap_File
 
     int seek(lua_State* L);
 
+    int lines_i(lua_State* L);
+
     int lines(lua_State* L);
 
     int setBuffer(lua_State* L);

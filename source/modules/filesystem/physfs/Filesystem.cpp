@@ -26,7 +26,7 @@ static std::string getApplicationPath(std::string origin)
             case love::Console::HAC:
                 return "sdmc:/lovepotion.nro";
             case love::Console::CAFE:
-                return "fs:/vol/external01/wiiu/apps/lovepotion/lovepotion.wuhb";
+                return "fs:/vol/external01/lovepotion.wuhb";
             default:
                 return std::string {};
         }
@@ -117,7 +117,6 @@ namespace love
         if (!PHYSFS_init(this->executablePath.c_str()))
             throw love::Exception("Error initializing PhysFS: {:s}", Filesystem::getLastError());
 
-        PHYSFS_setWriteDir(nullptr);
         this->setSymlinksEnabled(true);
     }
 
@@ -159,16 +158,15 @@ namespace love
         // clang-format on
 
         this->saveDirectoryNeedsMounting = false;
-
         return true;
     }
 
-    bool Filesystem::setIdentity(std::string_view identity, bool appendToPath)
+    bool Filesystem::setIdentity(const char* identity, bool appendToPath)
     {
         if (!PHYSFS_isInit())
             return false;
 
-        if (identity.empty())
+        if (identity == nullptr || strlen(identity) == 0)
             return false;
 
         for (auto& path : appCommonPaths)
@@ -177,7 +175,7 @@ namespace love
                 continue;
 
             std::string fullpath = this->getFullCommonPath(path);
-            if (!fullpath.empty() && !PHYSFS_unmount(fullpath.data()))
+            if (!fullpath.empty() && !PHYSFS_canUnmount(fullpath.c_str()))
                 return false;
         }
 
@@ -194,7 +192,7 @@ namespace love
         for (CommonPath path : appCommonPaths)
             this->fullPaths[path].clear();
 
-        this->saveIdentity         = identity;
+        this->saveIdentity         = std::string(identity);
         this->appendIdentityToPath = appendToPath;
 
         // clang-format off
@@ -251,7 +249,7 @@ namespace love
 
         if (iterator != this->allowedPaths.end())
             realPath = *iterator;
-        else if (this->isFused() && sourceBase.compare(archive))
+        else if (this->isFused() && sourceBase.compare(archive) == 0)
             realPath = sourceBase;
         else
         {
@@ -271,8 +269,8 @@ namespace love
             realPath += archive;
         }
 
-        return this->mountFullPath(realPath.c_str(), mountpoint, MOUNT_PERMISSIONS_READ,
-                                   appendtoPath);
+        const auto permissions = MOUNT_PERMISSIONS_READ;
+        return this->mountFullPath(realPath.c_str(), mountpoint, permissions, appendtoPath);
     }
 
     bool Filesystem::mount(Data* data, const char* archive, const char* mountpoint,
@@ -282,7 +280,7 @@ namespace love
             return false;
 
         if (PHYSFS_mountMemory(data->getData(), data->getSize(), nullptr, archive, mountpoint,
-                               appendToPath))
+                               appendToPath) != 0)
         {
             this->mountedData[archive] = data;
             return true;
@@ -298,10 +296,7 @@ namespace love
             return false;
 
         if (permissions == MOUNT_PERMISSIONS_READWRITE)
-        {
-            if (!PHYSFS_setWriteDir(archive))
-                return false;
-        }
+            return PHYSFS_mountRW(archive, mountpoint, appendToPath) != 0;
 
         return PHYSFS_mount(archive, mountpoint, appendToPath) != 0;
     }
@@ -344,6 +339,7 @@ namespace love
             return false;
 
         auto dataIterator = this->mountedData.find(archive);
+
         if (dataIterator != this->mountedData.end() && PHYSFS_unmount(archive) != 0)
         {
             this->mountedData.erase(dataIterator);
@@ -351,17 +347,20 @@ namespace love
         }
 
         auto iterator = std::find(this->allowedPaths.begin(), this->allowedPaths.end(), archive);
+
         if (iterator != this->allowedPaths.end())
             return this->unmountFullPath(archive);
 
         std::string sourceBase = this->getSourceBaseDirectory();
-        if (this->isFused() && sourceBase.compare(archive))
+
+        if (this->isFused() && sourceBase.compare(archive) == 0)
             return this->unmountFullPath(archive);
 
         if (strlen(archive) == 0 || strstr(archive, "..") || strcmp(archive, "/") == 0)
             return false;
 
         const char* realDirectory = PHYSFS_getRealDir(archive);
+
         if (!realDirectory)
             return false;
 
@@ -483,6 +482,11 @@ namespace love
             case COMMONPATH_USER_DOCUMENTS:
             {
                 this->fullPaths[path] = normalize(PHYSFS_getUserDir());
+                break;
+            }
+            case COMMONPATH_USER_DESKTOP:
+            {
+                this->fullPaths[path] = normalize(this->getUserDirectory());
                 break;
             }
             case COMMONPATH_MAX_ENUM:

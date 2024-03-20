@@ -100,19 +100,21 @@ namespace love
                 size = max - current;
 
             StrongRef<FileData> data(new FileData(size, this->getFilename()), Acquire::NO_RETAIN);
-            int64_t read = this->read(data->getData(), size);
+            int64_t bytesRead = this->read(data->getData(), size);
 
-            if (read < 0 || (read == 0 && read != size))
+            if (bytesRead < 0 || (bytesRead == 0 && bytesRead != size))
             {
                 delete data;
                 throw love::Exception("Could not read from file");
             }
 
-            if (read < size)
+            if (bytesRead < size)
             {
-                StrongRef<FileData> temp(new FileData(read, this->getFilename()),
-                                         Acquire::NO_RETAIN);
-                std::copy_n((const char*)data->getData(), read, (char*)temp->getData());
+                // clang-format off
+                StrongRef<FileData> temp(new FileData(bytesRead, this->getFilename()), Acquire::NO_RETAIN);
+                std::copy_n((const uint8_t*)data->getData(), (size_t)bytesRead, (uint8_t*)temp->getData());
+                // clang-format on
+
                 data = temp;
             }
 

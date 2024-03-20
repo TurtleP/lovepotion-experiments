@@ -18,8 +18,7 @@ namespace love
 
         FileData(const FileData& other);
 
-        virtual ~FileData()
-        {}
+        virtual ~FileData();
 
         FileData* clone() const override;
 
@@ -34,7 +33,7 @@ namespace love
         const std::string& getName() const;
 
       private:
-        std::unique_ptr<char[]> data;
+        char* data;
         uint64_t size;
 
         std::string filename;

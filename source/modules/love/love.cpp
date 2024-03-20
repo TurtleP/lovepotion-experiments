@@ -97,6 +97,22 @@ int love_isVersionCompatible(lua_State* L)
     return 1;
 }
 
+static bool hasDeprecationOutput = true;
+static int love_hasDeprecationOutput(lua_State* L)
+{
+    love::luax_pushboolean(L, hasDeprecationOutput);
+
+    return 1;
+}
+
+static int love_setDeprecationOutput(lua_State* L)
+{
+    bool enable          = love::luax_checkboolean(L, 1);
+    hasDeprecationOutput = enable;
+
+    return 0;
+}
+
 static void luax_addcompatibilityalias(lua_State* L, const char* module, const char* name,
                                        const char* alias)
 {
@@ -163,6 +179,12 @@ int love_initialize(lua_State* L)
 
     lua_pushstring(L, __OS__);
     lua_setfield(L, -2, "_os");
+
+    lua_pushcfunction(L, love_setDeprecationOutput);
+    lua_setfield(L, -2, "setDeprecationOutput");
+
+    lua_pushcfunction(L, love_hasDeprecationOutput);
+    lua_setfield(L, -2, "hasDeprecationOutput");
 
     love::luax_require(L, "love.data");
     lua_pop(L, 1);

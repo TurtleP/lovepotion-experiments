@@ -10,7 +10,7 @@ namespace
 {
     static constexpr char hexChars[17] = "0123456789abcdef";
 
-    char* bytesToHex(const uint8_t* source, size_t sourceLength, size_t destinationLength)
+    char* bytesToHex(const uint8_t* source, size_t sourceLength, size_t& destinationLength)
     {
         destinationLength = sourceLength * 2;
 
@@ -40,16 +40,16 @@ namespace
         return destination;
     }
 
-    uint8_t nibble(char x)
+    uint8_t nibble(char c)
     {
-        if (x >= '0' && x <= '9')
-            return (uint8_t)(x - '0');
+        if (c >= '0' && c <= '9')
+            return (uint8_t)(c - '0');
 
-        if (x >= 'A' && x <= 'F')
-            return (uint8_t)(x - 'A' + 0x0A);
+        if (c >= 'A' && c <= 'F')
+            return (uint8_t)(c - 'A' + 0x0A);
 
-        if (x >= 'a' && x <= 'f')
-            return (uint8_t)(x - 'a' + 0x0A);
+        if (c >= 'a' && c <= 'f')
+            return (uint8_t)(c - 'a' + 0x0A);
 
         return 0;
     }
@@ -78,12 +78,12 @@ namespace
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        for (size_t index = 0; index < destinationLength; index++)
+        for (size_t i = 0; i < destinationLength; i++)
         {
-            destination[index] = nibble(source[index * 2]) << 4;
+            destination[i] = nibble(source[i * 2]) << 4;
 
-            if (index * 2 + 1 < sourceLength)
-                destination[index] |= nibble(source[index * 2 + 1]);
+            if (i * 2 + 1 < sourceLength)
+                destination[i] |= nibble(source[i * 2 + 1]);
         }
 
         return destination;

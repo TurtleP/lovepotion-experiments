@@ -11,16 +11,16 @@ namespace love
         StrongRef() : object(nullptr)
         {}
 
-        StrongRef(T* object, Acquire acquire = Acquire::RETAIN) : object(object)
+        StrongRef(T* obj, Acquire acquire = Acquire::RETAIN) : object(obj)
         {
-            if (object && acquire == Acquire::RETAIN)
-                object->retain();
+            if (this->object && acquire == Acquire::RETAIN)
+                this->object->retain();
         }
 
         StrongRef(const StrongRef& other) : object(other.get())
         {
-            if (object)
-                object->retain();
+            if (this->object)
+                this->object->retain();
         }
 
         StrongRef(StrongRef&& other) : object(other.object)
@@ -30,8 +30,8 @@ namespace love
 
         ~StrongRef()
         {
-            if (object)
-                object->release();
+            if (this->object)
+                this->object->release();
         }
 
         StrongRef& operator=(const StrongRef& other)
@@ -55,15 +55,15 @@ namespace love
             return this->object;
         }
 
-        void set(T* _object, Acquire acquire = Acquire::RETAIN)
+        void set(T* obj, Acquire acquire = Acquire::RETAIN)
         {
-            if (_object && acquire == Acquire::RETAIN)
-                _object->retain();
+            if (obj && acquire == Acquire::RETAIN)
+                obj->retain();
 
             if (this->object)
                 this->object->release();
 
-            this->object = object;
+            this->object = obj;
         }
 
         T* get() const

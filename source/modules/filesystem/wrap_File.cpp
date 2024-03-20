@@ -6,6 +6,8 @@
 
 #include "modules/data/wrap_DataModule.hpp"
 
+#include <utility/logfile.hpp>
+
 using namespace love;
 
 int Wrap_File::getSize(lua_State* L)
@@ -135,7 +137,7 @@ int Wrap_File::write(lua_State* L)
     {
         try
         {
-            Data* data      = luax_totype<Data>(L, 2);
+            auto* data      = luax_totype<Data>(L, 2);
             const auto size = luaL_optinteger(L, 3, data->getSize());
 
             result = self->write(data->getData(), size);
@@ -209,7 +211,7 @@ int Wrap_File::seek(lua_State* L)
     return 1;
 }
 
-static int wrap_File_lines_i(lua_State* L)
+int Wrap_File::lines_i(lua_State* L)
 {
     auto* self = luax_checktype<File>(L, lua_upvalueindex(1));
 
@@ -320,14 +322,15 @@ int Wrap_File::lines(lua_State* L)
             return luaL_error(L, "Could not open file.");
     }
 
-    lua_pushcclosure(L, wrap_File_lines_i, 5);
+    lua_pushcclosure(L, Wrap_File::lines_i, 5);
 
     return 1;
 }
 
 int Wrap_File::setBuffer(lua_State* L)
 {
-    auto* self         = luax_checkfile(L, 1);
+    auto* self = luax_checkfile(L, 1);
+
     const char* string = luaL_checkstring(L, 2);
     int64_t size       = (int64_t)luaL_optnumber(L, 3, 0.0);
 
@@ -336,6 +339,7 @@ int Wrap_File::setBuffer(lua_State* L)
         return luax_enumerror(L, "file buffer mode", File::bufferModes, string);
 
     bool success = false;
+
     try
     {
         success = self->setBuffer(mode, size);
@@ -355,13 +359,13 @@ int Wrap_File::getBuffer(lua_State* L)
     auto* self   = luax_checkfile(L, 1);
     int64_t size = 0;
 
-    auto mode              = self->getBuffer(size);
-    const char* modeString = nullptr;
+    auto mode = self->getBuffer(size);
+    std::string_view modeString {};
 
-    if (!File::getConstant(modeString, mode))
+    if (!File::getConstant(mode, modeString))
         return luax_ioerror(L, "Unknown file buffer mode.");
 
-    lua_pushstring(L, modeString);
+    luax_pushstring(L, modeString);
     lua_pushnumber(L, (lua_Number)size);
 
     return 2;
@@ -369,9 +373,9 @@ int Wrap_File::getBuffer(lua_State* L)
 
 int Wrap_File::getMode(lua_State* L)
 {
-    auto* self      = luax_checkfile(L, 1);
-    const auto mode = self->getMode();
+    auto* self = luax_checkfile(L, 1);
 
+    const auto mode = self->getMode();
     std::string_view modeString {};
 
     if (!File::getConstant(mode, modeString))

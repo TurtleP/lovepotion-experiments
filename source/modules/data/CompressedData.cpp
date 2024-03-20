@@ -14,9 +14,7 @@ namespace love
         originalSize(rawSize)
     {
         if (own)
-        {
             this->data = data;
-        }
         else
         {
             try
@@ -34,7 +32,6 @@ namespace love
 
     CompressedData::CompressedData(const CompressedData& other) :
         format(other.format),
-        rawSize(other.rawSize),
         data(nullptr),
         dataSize(other.dataSize),
         originalSize(other.originalSize)
@@ -49,6 +46,11 @@ namespace love
         }
 
         std::copy_n(other.data, this->dataSize, this->data);
+    }
+
+    CompressedData::~CompressedData()
+    {
+        delete[] this->data;
     }
 
     CompressedData* CompressedData::clone() const

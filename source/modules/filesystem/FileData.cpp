@@ -15,7 +15,7 @@ namespace love
     {
         try
         {
-            this->data = std::make_unique<char[]>((size_t)this->size);
+            this->data = new char[(size_t)size];
         }
         catch (std::bad_alloc&)
         {
@@ -42,14 +42,19 @@ namespace love
     {
         try
         {
-            this->data = std::make_unique<char[]>((size_t)this->size);
+            this->data = new char[(size_t)this->size];
         }
         catch (std::bad_alloc&)
         {
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        std::copy_n(other.data.get(), this->size, this->data.get());
+        std::copy_n((uint8_t*)other.data, this->size, (uint8_t*)this->data);
+    }
+
+    FileData::~FileData()
+    {
+        delete[] this->data;
     }
 
     FileData* FileData::clone() const
@@ -59,7 +64,7 @@ namespace love
 
     void* FileData::getData() const
     {
-        return this->data.get();
+        return this->data;
     }
 
     size_t FileData::getSize() const

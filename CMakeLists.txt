@@ -122,14 +122,54 @@ add_library(lua53
 )
 target_link_libraries(lua53 PRIVATE PkgConfig::lua51)
 
+add_library(love_physfs
+    libraries/physfs/physfs.c
+    libraries/physfs/physfs.h
+    libraries/physfs/physfs_archiver_7z.c
+    libraries/physfs/physfs_archiver_csm.c
+    libraries/physfs/physfs_archiver_dir.c
+    libraries/physfs/physfs_archiver_grp.c
+    libraries/physfs/physfs_archiver_hog.c
+    libraries/physfs/physfs_archiver_iso9660.c
+    libraries/physfs/physfs_archiver_mvl.c
+    libraries/physfs/physfs_archiver_qpak.c
+    libraries/physfs/physfs_archiver_slb.c
+    libraries/physfs/physfs_archiver_unpacked.c
+    libraries/physfs/physfs_archiver_vdf.c
+    libraries/physfs/physfs_archiver_wad.c
+    libraries/physfs/physfs_archiver_zip.c
+    libraries/physfs/physfs_byteorder.c
+    libraries/physfs/physfs_casefolding.h
+    libraries/physfs/physfs_internal.h
+    libraries/physfs/physfs_lzmasdk.h
+    libraries/physfs/physfs_miniz.h
+    libraries/physfs/physfs_platforms.h
+    libraries/physfs/physfs_platform_android.c
+    libraries/physfs/physfs_platform_apple.m
+    libraries/physfs/physfs_platform_cafe.c
+    libraries/physfs/physfs_platform_ctr.c
+    libraries/physfs/physfs_platform_hac.c
+    libraries/physfs/physfs_platform_haiku.cpp
+    libraries/physfs/physfs_platform_ogc.c
+    libraries/physfs/physfs_platform_os2.c
+    libraries/physfs/physfs_platform_posix.c
+    libraries/physfs/physfs_platform_qnx.c
+    libraries/physfs/physfs_platform_unix.c
+    libraries/physfs/physfs_platform_windows.c
+    libraries/physfs/physfs_platform_winrt.cpp
+    libraries/physfs/physfs_unicode.c
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE love_physfs)
+
 # link everything else
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${APP_LIBS} physfs z luabit lua53
+    ${APP_LIBS} z luabit lua53
 )
 
 include_directories(
     include
     libraries/lua53
+    libraries/physfs
 )
 
 # find source -type f -name \*.cpp | clip

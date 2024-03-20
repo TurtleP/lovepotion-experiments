@@ -15,11 +15,7 @@ namespace love
 
         CompressedData(const CompressedData& other);
 
-        virtual ~CompressedData()
-        {
-            if (this->data)
-                delete[] this->data;
-        }
+        virtual ~CompressedData();
 
         Compressor::Format getFormat() const;
 
@@ -33,7 +29,6 @@ namespace love
 
       private:
         Compressor::Format format;
-        size_t rawSize;
 
         char* data;
         size_t dataSize;

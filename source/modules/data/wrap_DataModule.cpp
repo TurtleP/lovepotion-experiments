@@ -26,21 +26,21 @@ int Wrap_DataModule::compress(lua_State* L)
     if (!Compressor::getConstant(formatName, format))
         return luax_enumerror(L, "compressed data format", Compressor::formats, formatName);
 
-    int level         = luaL_optinteger(L, 4, -1);
-    size_t rawSize    = 0;
-    const char* bytes = nullptr;
+    int level            = luaL_optinteger(L, 4, -1);
+    size_t rawSize       = 0;
+    const char* rawBytes = nullptr;
 
     if (lua_isstring(L, 3))
-        bytes = luaL_checklstring(L, 3, &rawSize);
+        rawBytes = luaL_checklstring(L, 3, &rawSize);
     else
     {
         auto* rawData = luax_checktype<Data>(L, 3);
         rawSize       = rawData->getSize();
-        bytes         = (const char*)rawData->getData();
+        rawBytes      = (const char*)rawData->getData();
     }
 
     CompressedData* data = nullptr;
-    luax_catchexcept(L, [&] { data = data::compress(format, bytes, rawSize, level); });
+    luax_catchexcept(L, [&] { data = data::compress(format, rawBytes, rawSize, level); });
 
     if (containerType == data::CONTAINER_DATA)
         luax_pushtype(L, data);
@@ -141,7 +141,7 @@ int Wrap_DataModule::encode(lua_State* L)
         if (dst != nullptr)
             luax_catchexcept(L, [&] { data = instance()->newByteData(dst, dstLength, true); });
         else
-            data = instance()->newByteData(0);
+            luax_catchexcept(L, [&] { data = instance()->newByteData(0); });
 
         luax_pushtype(L, Data::type, data);
         data->release();
@@ -158,7 +158,7 @@ int Wrap_DataModule::encode(lua_State* L)
 
     return 1;
 }
-#include <utility/logfile.hpp>
+
 int Wrap_DataModule::decode(lua_State* L)
 {
     auto containerType     = luax_checkcontainertype(L, 1);
@@ -182,7 +182,6 @@ int Wrap_DataModule::decode(lua_State* L)
 
     size_t dstLength = 0;
     char* dst        = nullptr;
-
     luax_catchexcept(L, [&] { dst = data::decode(format, source, srcLength, dstLength); });
 
     if (containerType == data::CONTAINER_DATA)
@@ -192,7 +191,7 @@ int Wrap_DataModule::decode(lua_State* L)
         if (dst != nullptr)
             luax_catchexcept(L, [&] { data = instance()->newByteData(dst, dstLength, true); });
         else
-            data = instance()->newByteData(0);
+            luax_catchexcept(L, [&] { data = instance()->newByteData(0); });
 
         luax_pushtype(L, Data::type, data);
         data->release();

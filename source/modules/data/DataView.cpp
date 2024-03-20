@@ -35,7 +35,7 @@ namespace love
 
     void* DataView::getData() const
     {
-        return (uint8_t*)data->getData() + offset;
+        return (uint8_t*)this->data->getData() + this->offset;
     }
 
     size_t DataView::getSize() const

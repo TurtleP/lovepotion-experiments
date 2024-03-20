@@ -49,10 +49,10 @@ namespace love
             throw love::Exception(E_PHYSFS_NOT_INITIALIZED);
 
         if ((mode == MODE_READ) && !PHYSFS_exists(this->filename.c_str()))
-            throw love::Exception(E_COULD_NOT_OPEN_FILE "Does not exist.", this->filename);
+            throw love::Exception(E_COULD_NOT_OPEN_FILE " Does not exist.", this->filename);
 
         if ((mode == MODE_APPEND || mode == MODE_WRITE) && !setupWriteDirectory())
-            throw love::Exception("Could not write to directory.", this->filename);
+            throw love::Exception("Could not write to directory.");
 
         if (this->file != nullptr)
             return false;
@@ -62,20 +62,14 @@ namespace love
         switch (mode)
         {
             case MODE_READ:
-            {
                 handle = PHYSFS_openRead(this->filename.c_str());
                 break;
-            }
-            case MODE_WRITE:
-            {
-                handle = PHYSFS_openWrite(this->filename.c_str());
-                break;
-            }
             case MODE_APPEND:
-            {
                 handle = PHYSFS_openAppend(this->filename.c_str());
                 break;
-            }
+            case MODE_WRITE:
+                handle = PHYSFS_openWrite(this->filename.c_str());
+                break;
             default:
                 break;
         }
@@ -83,6 +77,7 @@ namespace love
         if (handle == nullptr)
         {
             const char* error = Filesystem::getLastError();
+
             if (error == nullptr)
                 error = "unknown error";
 
@@ -131,6 +126,14 @@ namespace love
         return PHYSFS_fileLength(this->file);
     }
 
+    int64_t File::tell()
+    {
+        if (this->file == nullptr)
+            return -1;
+
+        return PHYSFS_tell(this->file);
+    }
+
     int64_t File::read(void* destination, int64_t size)
     {
         if (!this->file || this->mode != MODE_READ)
@@ -139,7 +142,7 @@ namespace love
         if (size < 0)
             throw love::Exception(E_INVALID_READ_SIZE);
 
-        return PHYSFS_readBytes(this->file, destination, size);
+        return PHYSFS_readBytes(this->file, destination, (PHYSFS_uint64)size);
     }
 
     bool File::write(const void* data, int64_t size)
@@ -150,7 +153,7 @@ namespace love
         if (size < 0)
             throw love::Exception(E_INVALID_WRITE_SIZE);
 
-        const auto written = PHYSFS_writeBytes(this->file, data, size);
+        int64_t written = PHYSFS_writeBytes(this->file, data, (PHYSFS_uint64)size);
 
         if (written != size)
             return false;
@@ -175,14 +178,6 @@ namespace love
     bool File::isEOF()
     {
         return this->file == nullptr || PHYSFS_eof(this->file);
-    }
-
-    int64_t File::tell()
-    {
-        if (this->file == nullptr)
-            return -1;
-
-        return PHYSFS_tell(this->file);
     }
 
     bool File::seek(int64_t position, SeekOrigin origin)
@@ -226,7 +221,7 @@ namespace love
             }
             case BUFFER_LINE:
             case BUFFER_FULL:
-                result = PHYSFS_setBuffer(this->file, -size);
+                result = PHYSFS_setBuffer(this->file, size);
                 break;
         }
 

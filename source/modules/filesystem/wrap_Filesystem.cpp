@@ -7,6 +7,8 @@
 #include "modules/filesystem/wrap_File.hpp"
 #include "modules/filesystem/wrap_FileData.hpp"
 
+#include <utility/logfile.hpp>
+
 using namespace love;
 
 #define instance() (Module::getInstance<Filesystem>(Module::M_FILESYSTEM))
@@ -216,6 +218,7 @@ int Wrap_Filesystem::openFile(lua_State* L)
         return luax_enumerror(L, "file open mode", File::openModes, modeString);
 
     File* file = nullptr;
+
     try
     {
         file = instance()->openFile(filename, mode);
@@ -338,7 +341,7 @@ int Wrap_Filesystem::read(lua_State* L)
 
     try
     {
-        if (length > 0)
+        if (length >= 0)
             data = instance()->read(filename, length);
         else
             data = instance()->read(filename);
@@ -349,9 +352,9 @@ int Wrap_Filesystem::read(lua_State* L)
     }
 
     if (data == nullptr)
-        return luax_ioerror(L, "Could not read file '%s'.", filename);
+        return luax_ioerror(L, "File could not be read.");
 
-    if (containerType == data::CONTAINER_STRING)
+    if (containerType == data::CONTAINER_DATA)
         luax_pushtype(L, data);
     else
         lua_pushlstring(L, (const char*)data->getData(), data->getSize());
@@ -359,7 +362,7 @@ int Wrap_Filesystem::read(lua_State* L)
     lua_pushinteger(L, data->getSize());
     data->release();
 
-    return 1;
+    return 2;
 }
 
 static int write_or_append(lua_State* L, File::Mode mode)
@@ -371,7 +374,7 @@ static int write_or_append(lua_State* L, File::Mode mode)
 
     if (luax_istype(L, 2, Data::type))
     {
-        Data* data = luax_totype<Data>(L, 2);
+        auto* data = luax_totype<Data>(L, 2);
         input      = (const char*)data->getData();
         length     = data->getSize();
     }
@@ -442,7 +445,7 @@ int Wrap_Filesystem::lines(lua_State* L)
 
     lua_pushstring(L, "");
     lua_pushstring(L, 0);
-    lua_pushcclosure(L, Wrap_File::lines, 3);
+    lua_pushcclosure(L, Wrap_File::lines_i, 3);
 
     return 1;
 }
@@ -479,21 +482,22 @@ int Wrap_Filesystem::load(lua_State* L)
     }
 
     int status = 0;
+
+    // clang-format off
 #if (LUA_VERSION_NUM > 501) || defined(LUA_JITLIBNAME)
     const char* modeStr = nullptr;
     Filesystem::getConstant(mode, modeStr);
 
-    status = luaL_loadbufferx(L, (const char*)data->getData(), data->getSize(), filename.c_str(),
-                              modeStr);
+    status = luaL_loadbufferx(L, (const char*)data->getData(), data->getSize(), filename.c_str(), modeStr);
 #else
     if (mode == Filesystem::LOADMODE_ANY)
-        status =
-            luaL_loadbuffer(L, (const char*)data->getData(), data->getSize(), filename.c_str());
+        status = luaL_loadbuffer(L, (const char*)data->getData(), data->getSize(), filename.c_str());
     else
     {
         data->release();
         return luaL_error(L, "only \"bt\" is supported on this Lua interpreter\n");
     }
+    // clang-format on
 #endif
 
     data->release();
@@ -514,21 +518,21 @@ int Wrap_Filesystem::getInfo(lua_State* L)
     const char* filepath = luaL_checkstring(L, 1);
     Filesystem::Info info {};
 
-    int start                   = 2;
-    Filesystem::FileType filter = Filesystem::FILETYPE_MAX_ENUM;
+    int start       = 2;
+    auto filterType = Filesystem::FILETYPE_MAX_ENUM;
 
     if (lua_isstring(L, start))
     {
-        const char* type = luaL_checkstring(L, start);
-        if (!Filesystem::getConstant(type, filter))
-            return luax_enumerror(L, "file type", Filesystem::fileTypes, type);
+        const char* typeString = luaL_checkstring(L, start);
+        if (!Filesystem::getConstant(typeString, filterType))
+            return luax_enumerror(L, "file type", Filesystem::fileTypes, typeString);
 
         start++;
     }
 
     if (instance()->getInfo(filepath, info))
     {
-        if (filter != Filesystem::FILETYPE_MAX_ENUM && info.type != filter)
+        if (filterType != Filesystem::FILETYPE_MAX_ENUM && info.type != filterType)
         {
             lua_pushnil(L);
             return 1;
