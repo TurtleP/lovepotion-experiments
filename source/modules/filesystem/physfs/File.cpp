@@ -6,6 +6,8 @@
 #include <cstring>
 #include <physfs.h>
 
+#include <utility/logfile.hpp>
+
 namespace love
 {
     static bool setupWriteDirectory()
@@ -28,7 +30,7 @@ namespace love
 
     File::~File()
     {
-        if (mode != MODE_CLOSED)
+        if (this->mode != MODE_CLOSED)
             this->close();
     }
 
