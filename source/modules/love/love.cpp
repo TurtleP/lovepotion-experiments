@@ -203,12 +203,13 @@ int love_initialize(lua_State* L)
 
 /**
  * @brief Initializes the standard input/output for 3dslink.
- * Except we don't use 3dslink, we want a specific ip address.
- * This is taken in from the user in conf.lua as a string.
  *
- * Users will need to use telnet on Windows or netcat on Linux:
- * `telnet/netcat 192.168.x.x 17491`
+ * Users will need to use telnet on Windows or netcat on Linux/macOS:
+ * `telnet/netcat 192.168.x.x 8000`
  */
+
+#define SEND(sockfd, s) send(sockfd, s, strlen(s), 0)
+
 int love_openConsole(lua_State* L)
 {
     struct sockaddr_in server;
@@ -220,7 +221,8 @@ int love_openConsole(lua_State* L)
         return 1;
     }
 
-    std::memset(&server, 0, sizeof(server));
+    /* make piepie happy :) */
+    std::fill_n(&server, 1, sockaddr_in {});
 
     server.sin_family      = AF_INET;
     server.sin_addr.s_addr = 0;
@@ -249,7 +251,13 @@ int love_openConsole(lua_State* L)
         return 1;
     }
 
-    fflush(stdout);
+    {
+        SEND(sockfd, "HTTP/1.1 200 OK\r\n");
+        SEND(sockfd, "Content-Type: text/plain; charset=utf-8\r\n");
+        SEND(sockfd, "\r\n");
+    }
+
+    std::fflush(stdout);
     dup2(sockfd, STDOUT_FILENO);
 
     close(sockfd);

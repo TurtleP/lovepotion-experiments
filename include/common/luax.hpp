@@ -51,6 +51,7 @@ namespace love
 
     static constexpr const char* MAIN_THREAD_KEY      = "_love_mainthread";
     static constexpr const char* OBJECTS_REGISTRY_KEY = "_loveobjects";
+    static constexpr const char* MODULES_REGISTRY_KEY = "_modules";
 
     using ObjectKey = uint64_t;
 
@@ -107,14 +108,22 @@ namespace love
     Type* luax_type(lua_State* L, int index);
 
     template<typename T>
-    T* luax_totype(lua_State* L, int index, const Type&)
+    T* luax_totype(lua_State* L, int index, const Type& type)
     {
-        T* object = (T*)(((Proxy*)lua_touserdata(L, index))->object);
+        if (lua_type(L, index) != LUA_TUSERDATA)
+            return nullptr;
 
-        if (object == nullptr)
-            luaL_error(L, "Cannot use object after it has been released.");
+        Proxy* userdata = (Proxy*)lua_touserdata(L, index);
 
-        return object;
+        if (userdata->type != nullptr && userdata->type->isA(type))
+        {
+            if (userdata->object == nullptr)
+                luaL_error(L, "Cannot use object after it has been released.");
+
+            return (T*)userdata->object;
+        }
+
+        return nullptr;
     }
 
     template<typename T>

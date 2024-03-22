@@ -43,8 +43,6 @@ int Wrap_Data::getPointer(lua_State* L)
 
 int Wrap_Data::getFFIPointer(lua_State* L)
 {
-    auto* _ = luax_checkdata(L, 1);
-
     lua_pushnil(L);
 
     return 1;

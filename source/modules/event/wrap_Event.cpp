@@ -100,9 +100,9 @@ int Wrap_Event::clear(lua_State* L)
 int Wrap_Event::quit(lua_State* L)
 {
     const int length = std::max(lua_gettop(L), 1);
-    luax_catchexcept(L, [&] {
-        std::vector<Variant> args {};
+    std::vector<Variant> args {};
 
+    luax_catchexcept(L, [&] {
         for (int index = 1; index <= length; index++)
             args.push_back(luax_checkvariant(L, index));
 
@@ -118,9 +118,9 @@ int Wrap_Event::quit(lua_State* L)
 int Wrap_Event::restart(lua_State* L)
 {
     const int length = lua_gettop(L);
+    std::vector<Variant> args {};
 
     luax_catchexcept(L, [&] {
-        std::vector<Variant> args {};
         args.emplace_back("restart", strlen("restart"));
 
         for (int index = 1; index <= length; index++)
@@ -150,7 +150,7 @@ static constexpr luaL_Reg functions[] =
 
 int Wrap_Event::open(lua_State* L)
 {
-    Event* instance = instance();
+    auto* instance = instance();
 
     if (instance == nullptr)
         luax_catchexcept(L, [&]() { instance = new Event(); });
@@ -162,6 +162,7 @@ int Wrap_Event::open(lua_State* L)
     module.name      = "event";
     module.type      = &Module::type;
     module.functions = functions;
+    module.types     = nullptr;
 
     int result = luax_register_module(L, module);
 

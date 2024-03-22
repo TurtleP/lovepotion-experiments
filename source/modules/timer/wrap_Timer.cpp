@@ -73,6 +73,7 @@ int Wrap_Timer::open(lua_State* L)
     module.name      = "timer";
     module.type      = &Module::type;
     module.functions = functions;
+    module.types     = nullptr;
 
     return luax_register_module(L, module);
 }

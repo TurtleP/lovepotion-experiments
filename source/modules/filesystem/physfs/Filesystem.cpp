@@ -15,6 +15,11 @@
 #define normalize(x) std::string(std::filesystem::path((x)).lexically_normal())
 #define parentize(x) std::string(std::filesystem::path((x)).parent_path())
 
+/**
+ * @brief Get the application path for the current console.
+ * @param origin The origin of the application path.
+ * @return The application path.
+ */
 static std::string getApplicationPath(std::string origin)
 {
     if (origin == "embedded boot.lua")
@@ -87,7 +92,6 @@ namespace love
         appendIdentityToPath(false),
         fused(false),
         fusedSet(false),
-        allowedPaths(),
         fullPaths(),
         commonPathMountInfo(),
         saveDirectoryNeedsMounting(false)
@@ -115,7 +119,10 @@ namespace love
             throw love::Exception("Error getting application path.");
 
         if (!PHYSFS_init(this->executablePath.c_str()))
-            throw love::Exception("Error initializing PhysFS: {:s}", Filesystem::getLastError());
+        {
+            throw love::Exception("Failed to initialize filesystem: {:s}",
+                                  Filesystem::getLastError());
+        }
 
         this->setSymlinksEnabled(true);
     }
@@ -135,30 +142,6 @@ namespace love
             return false;
 
         return this->fused;
-    }
-
-    bool Filesystem::setupWriteDirectory()
-    {
-        if (!PHYSFS_isInit())
-            return false;
-
-        if (!this->saveDirectoryNeedsMounting)
-            return true;
-
-        if (this->saveIdentity.empty())
-            return false;
-
-        bool create      = true;
-        auto path        = COMMONPATH_APP_SAVEDIR;
-        auto permissions = MOUNT_PERMISSIONS_READWRITE;
-
-        // clang-format off
-        if (!this->mountCommonPathInternal(path, nullptr, permissions, this->appendIdentityToPath, create))
-            return false;
-        // clang-format on
-
-        this->saveDirectoryNeedsMounting = false;
-        return true;
     }
 
     bool Filesystem::setIdentity(const char* identity, bool appendToPath)
@@ -181,7 +164,7 @@ namespace love
 
         std::array<bool, COMMONPATH_MAX_ENUM> oldPaths { false };
 
-        for (auto& path : appCommonPaths)
+        for (auto path : appCommonPaths)
         {
             oldPaths[path] = this->commonPathMountInfo[path].mounted;
 
@@ -189,7 +172,7 @@ namespace love
                 this->unmount(path);
         }
 
-        for (CommonPath path : appCommonPaths)
+        for (auto path : appCommonPaths)
             this->fullPaths[path].clear();
 
         this->saveIdentity         = std::string(identity);
@@ -199,7 +182,7 @@ namespace love
         if (!this->mountCommonPathInternal(COMMONPATH_APP_SAVEDIR, nullptr, MOUNT_PERMISSIONS_READWRITE, appendToPath, false))
             this->saveDirectoryNeedsMounting = true;
 
-        for (CommonPath path : appCommonPaths)
+        for (auto path : appCommonPaths)
         {
             if (oldPaths[path] && path != COMMONPATH_APP_SAVEDIR)
             {
@@ -208,6 +191,7 @@ namespace love
             }
         }
         // clang-format on
+
         return true;
     }
 
@@ -235,6 +219,28 @@ namespace love
     std::string Filesystem::getSource() const
     {
         return this->source;
+    }
+
+    bool Filesystem::setupWriteDirectory()
+    {
+        if (!PHYSFS_isInit())
+            return false;
+
+        if (!this->saveDirectoryNeedsMounting)
+            return true;
+
+        if (this->saveIdentity.empty())
+            return false;
+
+        bool create = true;
+
+        // clang-format off
+        if (!this->mountCommonPathInternal(COMMONPATH_APP_SAVEDIR, nullptr, MOUNT_PERMISSIONS_READWRITE, this->appendIdentityToPath, create))
+            return false;
+        // clang-format on
+
+        this->saveDirectoryNeedsMounting = false;
+        return true;
     }
 
     bool Filesystem::mount(const char* archive, const char* mountpoint, bool appendtoPath)
@@ -271,22 +277,6 @@ namespace love
 
         const auto permissions = MOUNT_PERMISSIONS_READ;
         return this->mountFullPath(realPath.c_str(), mountpoint, permissions, appendtoPath);
-    }
-
-    bool Filesystem::mount(Data* data, const char* archive, const char* mountpoint,
-                           bool appendToPath)
-    {
-        if (!PHYSFS_isInit() || !archive)
-            return false;
-
-        if (PHYSFS_mountMemory(data->getData(), data->getSize(), nullptr, archive, mountpoint,
-                               appendToPath) != 0)
-        {
-            this->mountedData[archive] = data;
-            return true;
-        }
-
-        return false;
     }
 
     bool Filesystem::mountFullPath(const char* archive, const char* mountpoint,
@@ -333,6 +323,22 @@ namespace love
         return this->mountCommonPathInternal(path, mountPoint, permissions, appendToPath, true);
     }
 
+    bool Filesystem::mount(Data* data, const char* archive, const char* mountpoint,
+                           bool appendToPath)
+    {
+        if (!PHYSFS_isInit() || !archive)
+            return false;
+
+        if (PHYSFS_mountMemory(data->getData(), data->getSize(), nullptr, archive, mountpoint,
+                               appendToPath) != 0)
+        {
+            this->mountedData[archive] = data;
+            return true;
+        }
+
+        return false;
+    }
+
     bool Filesystem::unmount(const char* archive)
     {
         if (!PHYSFS_isInit() || !archive)
@@ -374,18 +380,12 @@ namespace love
         return PHYSFS_unmount(realPath.c_str()) != 0;
     }
 
-    bool Filesystem::unmount(Data* data)
+    bool Filesystem::unmountFullPath(const char* fullpath)
     {
-        for (const auto& dataPair : this->mountedData)
-        {
-            if (dataPair.second.get() == data)
-            {
-                std::string archive = dataPair.first;
-                return this->unmount(archive.c_str());
-            }
-        }
+        if (!PHYSFS_isInit() || !fullpath)
+            return false;
 
-        return false;
+        return PHYSFS_unmount(fullpath) != 0;
     }
 
     bool Filesystem::unmount(CommonPath path)
@@ -401,12 +401,18 @@ namespace love
         return false;
     }
 
-    bool Filesystem::unmountFullPath(const char* fullpath)
+    bool Filesystem::unmount(Data* data)
     {
-        if (!PHYSFS_isInit() || !fullpath)
-            return false;
+        for (const auto& dataPair : this->mountedData)
+        {
+            if (dataPair.second.get() == data)
+            {
+                std::string archive = dataPair.first;
+                return this->unmount(archive.c_str());
+            }
+        }
 
-        return PHYSFS_unmount(fullpath) != 0;
+        return false;
     }
 
     File* Filesystem::openFile(std::string_view filename, File::Mode mode) const

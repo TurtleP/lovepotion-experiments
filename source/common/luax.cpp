@@ -6,8 +6,6 @@
 #include <cmath>
 #include <cstring>
 
-#include <utility/logfile.hpp>
-
 #define LOVE_UNUSED(x) (void)sizeof(x)
 
 namespace love
@@ -112,7 +110,7 @@ namespace love
         switch (registry)
         {
             case REGISTRY_MODULES:
-                return luax_insistlove(L, "_modules");
+                return luax_insistlove(L, MODULES_REGISTRY_KEY);
             case REGISTRY_OBJECTS:
                 return luax_insist(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
             default:
@@ -125,7 +123,7 @@ namespace love
         switch (registry)
         {
             case REGISTRY_MODULES:
-                return luax_getlove(L, "_modules");
+                return luax_getlove(L, MODULES_REGISTRY_KEY);
             case REGISTRY_OBJECTS:
             {
                 lua_getfield(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
@@ -149,7 +147,7 @@ namespace love
 #endif
     }
 
-    int luax_register_searcher(lua_State* L, lua_CFunction function, int index)
+    int luax_register_searcher(lua_State* L, lua_CFunction function, int position)
     {
         lua_getglobal(L, "package");
 
@@ -168,7 +166,7 @@ namespace love
             return luaL_error(L, "Can't register searcher: package.loaders table does not exist.");
 
         lua_pushcfunction(L, function);
-        luax_table_insert(L, -2, -1, index);
+        luax_table_insert(L, -2, -1, position);
 
         lua_pop(L, 3);
 
@@ -689,11 +687,11 @@ namespace love
             return false;
 
         lua_rawgeti(L, index, 1);
-        bool table = lua_istable(L, -1);
+        bool tableOfTables = lua_istable(L, -1);
 
         lua_pop(L, 1);
 
-        return table;
+        return tableOfTables;
     }
 
     // #endregion

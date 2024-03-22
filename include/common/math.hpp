@@ -40,8 +40,8 @@
 #define LOVE_TODEG(x)   (float)(x * LOVE_M_TODEG)
 
 /* 3DS Texture Limits */
-#define LOVE_TEX3DS_MIN 0x08
-#define LOVE_TEX3DS_MAX 0x400
+#define LOVE_TEX3DS_MIN (size_t)0x08
+#define LOVE_TEX3DS_MAX (size_t)0x400
 
 namespace love
 {
@@ -80,6 +80,6 @@ namespace love
             return x;
 
         unsigned result = 1u << (32 - __builtin_clz(x - 1));
-        return std::clamp<size_t>(result, LOVE_TEX3DS_MIN, LOVE_TEX3DS_MAX);
+        return std::clamp(result, LOVE_TEX3DS_MIN, LOVE_TEX3DS_MAX);
     }
 } // namespace love

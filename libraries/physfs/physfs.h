@@ -148,7 +148,6 @@
  *   - .HOG (Descent I/II/III HOG file archives)
  *   - .MVL (Descent II movielib archives)
  *   - .WAD (DOOM engine archives)
- *   - .BIN (Chasm: The Rift engine archives)
  *   - .VDF (Gothic I/II engine archives)
  *   - .SLB (Independence War archives)
  *
@@ -436,7 +435,7 @@ typedef struct PHYSFS_Version
 
 #ifndef DOXYGEN_SHOULD_IGNORE_THIS
 #define PHYSFS_VER_MAJOR 3
-#define PHYSFS_VER_MINOR 3
+#define PHYSFS_VER_MINOR 2
 #define PHYSFS_VER_PATCH 0
 #endif  /* DOXYGEN_SHOULD_IGNORE_THIS */
 
@@ -2823,6 +2822,7 @@ PHYSFS_DECL int PHYSFS_unmount(const char *oldDir);
  * \brief Check whether a directory or archive can be unmounted.
  */
 PHYSFS_DECL int PHYSFS_canUnmount(const char *oldDir);
+
 
 /**
  * \fn const PHYSFS_Allocator *PHYSFS_getAllocator(void)

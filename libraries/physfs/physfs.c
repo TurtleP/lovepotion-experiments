@@ -319,7 +319,7 @@ static PHYSFS_Io *memoryIo_duplicate(PHYSFS_Io *io)
         BAIL(PHYSFS_ERR_OUT_OF_MEMORY, NULL);
     } /* if */
 
-    (void) __PHYSFS_ATOMIC_INCR(&info->refcount);
+    __PHYSFS_ATOMIC_INCR(&info->refcount);
 
     memset(newinfo, '\0', sizeof (*info));
     newinfo->buf = info->buf;
@@ -1103,6 +1103,7 @@ static int freeDirHandle(DirHandle *dh, FileHandle *openList)
     return 1;
 } /* freeDirHandle */
 
+
 static int dirHandleFilesOpen(DirHandle *dh, FileHandle *openList)
 {
     FileHandle *i;
@@ -1118,6 +1119,7 @@ static int dirHandleFilesOpen(DirHandle *dh, FileHandle *openList)
 
     return 0;
 } /* dirHandleFilesOpen */
+
 
 static char *calculateBaseDir(const char *argv0)
 {
@@ -1204,9 +1206,6 @@ static int initStaticArchivers(void)
     #endif
     #if PHYSFS_SUPPORTS_WAD
         REGISTER_STATIC_ARCHIVER(WAD);
-    #endif
-    #if PHYSFS_SUPPORTS_CSM
-        REGISTER_STATIC_ARCHIVER(CSM);
     #endif
     #if PHYSFS_SUPPORTS_SLB
         REGISTER_STATIC_ARCHIVER(SLB);
@@ -1922,11 +1921,13 @@ int PHYSFS_mount(const char *newDir, const char *mountPoint, int appendToPath)
     return doMount(NULL, newDir, mountPoint, appendToPath, 0);
 } /* PHYSFS_mount */
 
-int PHYSFS_mountRW(const char* newDir, const char* mountPoint, int appendToPath)
+
+int PHYSFS_mountRW(const char *newDir, const char *mountPoint, int appendToPath)
 {
     BAIL_IF(!newDir, PHYSFS_ERR_INVALID_ARGUMENT, 0);
     return doMount(NULL, newDir, mountPoint, appendToPath, 1);
 } /* PHYSFS_mount */
+
 
 int PHYSFS_addToSearchPath(const char *newDir, int appendToPath)
 {
@@ -1971,6 +1972,7 @@ int PHYSFS_unmount(const char *oldDir)
 
     BAIL_MUTEX(PHYSFS_ERR_NOT_MOUNTED, stateLock, 0);
 } /* PHYSFS_unmount */
+
 
 int PHYSFS_canUnmount(const char *oldDir)
 {
@@ -2253,11 +2255,12 @@ static int verifyPath(DirHandle *h, char **_fname, int allowMissing)
     return retval;
 } /* verifyPath */
 
-static int countPathComponents(const char* path)
+
+static int countPathComponents(const char *path)
 {
     int components = 0;
-    const char* start;
-    const char* end;
+    const char *start;
+    const char *end;
 
     if (path == NULL)
         return 0;
@@ -2280,17 +2283,18 @@ static int countPathComponents(const char* path)
     return components;
 } /* countPathComponents */
 
-static DirHandle* findWriteHandle(const char* _fname)
+
+static DirHandle *findWriteHandle(const char *_fname)
 {
-    DirHandle* i                 = NULL;
-    int deepest_path_components  = -1;
-    DirHandle* deepest_dirhandle = NULL;
-    char* allocated_fname;
-    char* fname;
+    DirHandle *i = NULL;
+    int deepest_path_components = -1;
+    DirHandle *deepest_dirhandle = NULL;
+    char *allocated_fname;
+    char *fname;
     size_t len;
 
-    len             = strlen(_fname) + longest_root + 1;
-    allocated_fname = (char*)__PHYSFS_smallAlloc(len);
+    len = strlen(_fname) + longest_root + 1;
+    allocated_fname = (char *) __PHYSFS_smallAlloc(len);
     BAIL_IF(!allocated_fname, PHYSFS_ERR_OUT_OF_MEMORY, NULL);
     fname = allocated_fname + longest_root;
 
@@ -2298,7 +2302,7 @@ static DirHandle* findWriteHandle(const char* _fname)
     {
         for (i = searchPath; i != NULL; i = i->next)
         {
-            char* arcfname = fname;
+            char *arcfname = fname;
             if (i->forWriting && verifyPath(i, &arcfname, 0))
             {
                 int path_components = 0;
@@ -2307,16 +2311,17 @@ static DirHandle* findWriteHandle(const char* _fname)
                 if (path_components > deepest_path_components)
                 {
                     deepest_path_components = path_components;
-                    deepest_dirhandle       = i;
+                    deepest_dirhandle = i;
                 } /* if */
-            }     /* if */
-        }         /* for */
-    }             /* if */
+            } /* if */
+        } /* for */
+    } /* if */
 
     __PHYSFS_smallFree(allocated_fname);
 
     return deepest_dirhandle != NULL ? deepest_dirhandle : writeDir;
 } /* findWriteHandle */
+
 
 /* This must hold the stateLock before calling. */
 static int doMkdir(const char *_dname, char *dname, DirHandle *h)

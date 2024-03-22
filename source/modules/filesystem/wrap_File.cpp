@@ -206,7 +206,7 @@ int Wrap_File::seek(lua_State* L)
     if (position < 0.0 || position >= 9007199254740992.0)
         luax_pushboolean(L, false);
     else
-        luax_pushboolean(L, self->seek((int64_t)position));
+        luax_pushboolean(L, self->seek((uint64_t)position));
 
     return 1;
 }

@@ -26,19 +26,21 @@ namespace love
             current = this->tell();
         }
 
-        current = std::clamp<int64_t>(size, 0, max);
+        current = std::clamp<int64_t>(current, 0, max);
 
         if (current + size > max)
             size = max - current;
 
         StrongRef<ByteData> destination(new ByteData((size_t)size, false), Acquire::NO_RETAIN);
-        const auto read = this->read(destination->getData(), size);
+        const auto bytesRead = this->read(destination->getData(), size);
 
-        if (read < 0 || (read == 0 && read != size))
+        if (bytesRead < 0 || (bytesRead == 0 && bytesRead != size))
             throw love::Exception("Could not read read from stream.");
 
-        if (read < size)
-            destination.set(new ByteData(destination->getData(), (size_t)read), Acquire::NO_RETAIN);
+        // clang-format off
+        if (bytesRead < size)
+            destination.set(new ByteData(destination->getData(), (size_t)bytesRead), Acquire::NO_RETAIN);
+        // clang-format on
 
         destination->retain();
         return destination;

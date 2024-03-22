@@ -298,19 +298,19 @@ int Wrap_DataModule::unpack(lua_State* L)
 {
     const char* format = luaL_checkstring(L, 1);
 
-    const char* data = nullptr;
-    size_t size      = 0;
+    const char* input = nullptr;
+    size_t size       = 0;
 
     if (luax_istype(L, 2, Data::type))
     {
-        auto* _data = luax_checkdata(L, 2);
-        data        = (const char*)_data->getData();
-        size        = _data->getSize();
+        auto* data = luax_checkdata(L, 2);
+        input      = (const char*)data->getData();
+        size       = data->getSize();
     }
     else
-        data = luaL_checklstring(L, 2, &size);
+        input = luaL_checklstring(L, 2, &size);
 
-    return lua53_str_unpack(L, format, data, size, 2, 3);
+    return lua53_str_unpack(L, format, input, size, 2, 3);
 }
 
 int Wrap_DataModule::newByteData(lua_State* L)

@@ -18,8 +18,10 @@ namespace love
 
     File::File(std::string_view filename, Mode mode) : FileBase(filename), file(nullptr)
     {
+        LOG("Opening file {} with mode {}", filename, (int)mode)
         if (!this->open(mode))
             throw love::Exception(E_COULD_NOT_OPEN_FILE, filename);
+        LOG("File opened successfully")
     }
 
     File::File(const File& other) : FileBase(other), file(nullptr)
@@ -54,7 +56,7 @@ namespace love
             throw love::Exception(E_COULD_NOT_OPEN_FILE " Does not exist.", this->filename);
 
         if ((mode == MODE_APPEND || mode == MODE_WRITE) && !setupWriteDirectory())
-            throw love::Exception("Could not write to directory.");
+            throw love::Exception("Could not set write directory.");
 
         if (this->file != nullptr)
             return false;
@@ -190,12 +192,12 @@ namespace love
         if (origin == SEEKORIGIN_CURRENT)
             position += this->tell();
         else if (origin == SEEKORIGIN_END)
-            position = this->getSize();
+            position += this->getSize();
 
         if (position < 0)
             return false;
 
-        return this->file != nullptr && PHYSFS_seek(this->file, position) != 0;
+        return this->file != nullptr && PHYSFS_seek(this->file, (PHYSFS_uint64)position) != 0;
     }
 
     bool File::setBuffer(BufferMode mode, int64_t size)

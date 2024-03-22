@@ -34,6 +34,7 @@ static std::size_t replaceAll(std::string& inout, std::string_view what, std::st
 int Wrap_Filesystem::init(lua_State* L)
 {
     const char* arg0 = luaL_checkstring(L, 1);
+
     luax_catchexcept(L, [&] { instance()->init(arg0); });
 
     return 0;
@@ -42,6 +43,7 @@ int Wrap_Filesystem::init(lua_State* L)
 int Wrap_Filesystem::setFused(lua_State* L)
 {
     bool fused = luax_toboolean(L, 1);
+
     instance()->setFused(fused);
 
     return 0;
@@ -60,7 +62,7 @@ int Wrap_Filesystem::setIdentity(lua_State* L)
     bool append      = luax_optboolean(L, 2, false);
 
     if (!instance()->setIdentity(name, append))
-        return luaL_error(L, "Could not set write directory to '%s'.", name);
+        return luaL_error(L, "Could not set write directory.");
 
     return 0;
 }
@@ -94,14 +96,14 @@ int Wrap_Filesystem::mount(lua_State* L)
     std::string archive {};
     if (luax_istype(L, 1, Data::type))
     {
-        Data* data = luax_checkdata(L, 1);
+        auto* data = luax_checkdata(L, 1);
         int start  = 2;
 
         if (luax_istype(L, 1, FileData::type) && !lua_isstring(L, 3))
         {
-            FileData* fileData = luax_checkfiledata(L, 1);
-            archive            = fileData->getFilename();
-            start              = 2;
+            auto* fileData = luax_checkfiledata(L, 1);
+            archive        = fileData->getFilename();
+            start          = 2;
         }
         else
         {
@@ -388,9 +390,9 @@ static int write_or_append(lua_State* L, File::Mode mode)
     try
     {
         if (mode == File::MODE_APPEND)
-            instance()->append(filename, input, length);
+            instance()->append(filename, (const void*)input, length);
         else
-            instance()->write(filename, input, length);
+            instance()->write(filename, (const void*)input, length);
     }
     catch (love::Exception& e)
     {
@@ -495,7 +497,7 @@ int Wrap_Filesystem::load(lua_State* L)
     else
     {
         data->release();
-        return luaL_error(L, "only \"bt\" is supported on this Lua interpreter\n");
+        return luaL_error(L, "Only \"bt\" is supported on this Lua interpreter.\n");
     }
     // clang-format on
 #endif
@@ -505,9 +507,9 @@ int Wrap_Filesystem::load(lua_State* L)
     switch (status)
     {
         case LUA_ERRMEM:
-            return luaL_error(L, "Memory allocation error: %s", lua_tostring(L, -1));
+            return luaL_error(L, "Memory allocation error: %s\n", lua_tostring(L, -1));
         case LUA_ERRSYNTAX:
-            return luaL_error(L, "Syntax error: %s", lua_tostring(L, -1));
+            return luaL_error(L, "Syntax error: %s\n", lua_tostring(L, -1));
         default:
             return 1;
     }
@@ -553,14 +555,14 @@ int Wrap_Filesystem::getInfo(lua_State* L)
         luax_pushboolean(L, info.readonly);
         lua_setfield(L, -2, "readonly");
 
-        info.size = std::min(info.size, 0x20000000000000LL);
+        info.size = std::min(info.size, File::MAX_FILE_SIZE);
         if (info.size >= 0)
         {
             lua_pushnumber(L, (lua_Number)info.size);
             lua_setfield(L, -2, "size");
         }
 
-        info.modtime = std::min(info.modtime, 0x20000000000000LL);
+        info.modtime = std::min(info.modtime, File::MAX_MODTIME);
         if (info.modtime >= 0)
         {
             lua_pushnumber(L, (lua_Number)info.modtime);
@@ -644,7 +646,7 @@ int Wrap_Filesystem::getRequirePath(lua_State* L)
         path += element;
     }
 
-    luax_pushstring(L, path.c_str());
+    luax_pushstring(L, path);
     return 1;
 }
 
@@ -685,7 +687,7 @@ int Wrap_Filesystem::getCRequirePath(lua_State* L)
         path += element;
     }
 
-    luax_pushstring(L, path.c_str());
+    luax_pushstring(L, path);
     return 1;
 }
 
@@ -750,6 +752,7 @@ namespace love
         if (lua_isstring(L, index))
         {
             const char* filename = luaL_checkstring(L, index);
+
             try
             {
                 result = instance()->openFile(filename, File::MODE_CLOSED);
@@ -768,7 +771,7 @@ namespace love
         return result;
     }
 
-    FileData* luax_getfiledata(lua_State* L, int index, bool error, int& results)
+    FileData* luax_getfiledata(lua_State* L, int index, bool ioerror, int& results)
     {
         FileData* data = nullptr;
         File* file     = nullptr;
@@ -796,7 +799,8 @@ namespace love
             catch (love::Exception& e)
             {
                 file->release();
-                if (error)
+
+                if (ioerror)
                     results = luax_ioerror(L, "%s", e.what());
                 else
                     results = luaL_error(L, "%s", e.what());
@@ -847,6 +851,23 @@ namespace love
 
         return data;
     }
+
+    bool luax_cangetfile(lua_State* L, int index)
+    {
+        return lua_isstring(L, index) || luax_istype(L, index, File::type);
+    }
+
+    // clang-format off
+    bool luax_cangetfiledata(lua_State* L, int index)
+    {
+        return lua_isstring(L, index) || luax_istype(L, index, File::type) || luax_istype(L, index, FileData::type);
+    }
+
+    bool luax_cangetdata(lua_State* L, int index)
+    {
+        return lua_isstring(L, index) || luax_istype(L, index, File::type) || luax_istype(L, index, Data::type);
+    }
+    // clang-format on
 } // namespace love
 
 // clang-format off
@@ -857,7 +878,6 @@ static constexpr luaL_Reg functions[]
     { "getAppdataDirectory",    Wrap_Filesystem::getAppdataDirectory    },
     { "getExecutablePath",      Wrap_Filesystem::getExecutablePath      },
     { "getIdentity",            Wrap_Filesystem::getIdentity            },
-    { "getInfo",                Wrap_Filesystem::getInfo                },
     { "getRealDirectory",       Wrap_Filesystem::getRealDirectory       },
     { "getSaveDirectory",       Wrap_Filesystem::getSaveDirectory       },
     { "getSource",              Wrap_Filesystem::getSource              },
@@ -896,8 +916,8 @@ static constexpr luaL_Reg functions[]
 
 static constexpr lua_CFunction types[] =
 {
-    love::open_filedata,
     love::open_file,
+    love::open_filedata,
     nullptr
 };
 // clang-format on

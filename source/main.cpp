@@ -67,7 +67,7 @@ static DoneAction runLove(char** argv, int argc, int& result, love::Variant& res
     }
 
     love::luax_pushvariant(L, restartValue);
-    lua_setfield(L, -2, "_restart");
+    lua_setfield(L, -2, "restart");
     restartValue = love::Variant();
 
     lua_pop(L, 1);
@@ -91,11 +91,8 @@ static DoneAction runLove(char** argv, int argc, int& result, love::Variant& res
     int index = position;
     if (!lua_isnoneornil(L, index))
     {
-        if (lua_type(L, index) == LUA_TSTRING &&
-            std::strncmp(lua_tostring(L, index), "restart", 7) == 0)
-        {
+        if (lua_type(L, index) == LUA_TSTRING && strcmp(lua_tostring(L, index), "restart") == 0)
             action = DONE_RESTART;
-        }
         else if (lua_isnumber(L, index))
             result = lua_tonumber(L, index);
 

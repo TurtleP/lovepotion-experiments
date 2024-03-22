@@ -105,6 +105,9 @@ namespace love
         Color32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a)
         {}
 
+        Color32(uint8_t (&rgba)[4]) : r(rgba[0]), g(rgba[1]), b(rgba[2]), a(rgba[3])
+        {}
+
         constexpr std::strong_ordering operator<=>(const Color32& other) const noexcept = default;
 
         uint8_t r, g, b, a;

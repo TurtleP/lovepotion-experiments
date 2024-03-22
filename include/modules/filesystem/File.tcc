@@ -21,6 +21,7 @@ namespace love
         static inline Type type = Type("File", &Stream::type);
 
         static constexpr int64_t MAX_FILE_SIZE = 0x20000000000000LL;
+        static constexpr int64_t MAX_MODTIME   = 0x20000000000000LL;
 
         enum Mode
         {
@@ -86,13 +87,13 @@ namespace love
             bool isOpen = this->isOpen();
 
             if (!isOpen && !this->open(MODE_READ))
-                throw love::Exception("Could not read file {}", this->getFilename());
+                throw love::Exception("Could not read file {}.", this->getFilename());
 
             int64_t max     = this->getSize();
             int64_t current = this->tell();
 
             if (size < 0)
-                throw love::Exception("Invalid read size {:d}", size);
+                throw love::Exception("Invalid read size.");
 
             current = std::clamp(current, (int64_t)0, max);
 
