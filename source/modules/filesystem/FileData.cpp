@@ -49,7 +49,7 @@ namespace love
             throw love::Exception(E_OUT_OF_MEMORY);
         }
 
-        std::copy_n((uint8_t*)other.data, this->size, (uint8_t*)this->data);
+        std::copy_n((char*)other.data, this->size, (char*)this->data);
     }
 
     FileData::~FileData()
@@ -70,7 +70,7 @@ namespace love
     size_t FileData::getSize() const
     {
         size_t max = std::numeric_limits<size_t>::max();
-        return size > max ? max : (size_t)size;
+        return this->size > max ? max : (size_t)this->size;
     }
 
     const std::string& FileData::getFilename() const

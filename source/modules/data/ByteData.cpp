@@ -42,8 +42,7 @@ namespace love
     {
         this->create();
 
-        if (other.data)
-            std::copy_n(other.data, this->size, this->data);
+        std::copy_n(other.data, this->size, this->data);
     }
 
     ByteData::~ByteData()

@@ -15,14 +15,16 @@
 #define normalize(x) std::string(std::filesystem::path((x)).lexically_normal())
 #define parentize(x) std::string(std::filesystem::path((x)).parent_path())
 
+#include "utility/logfile.hpp"
+
 /**
  * @brief Get the application path for the current console.
- * @param origin The origin of the application path.
+ * @param argv0 The first argument passed to the application.
  * @return The application path.
  */
-static std::string getApplicationPath(std::string origin)
+static std::string getApplicationPath(std::string argv0)
 {
-    if (origin == "embedded boot.lua")
+    if (argv0 == "embedded boot.lua")
     {
         switch (love::Console::Current)
         {
@@ -47,19 +49,20 @@ static std::string getApplicationPath(std::string origin)
         char path[256];
 
         bool (*RL_GetPathOfRunningExecutable)(char*, uint32_t);
-        auto** ptrFunction = reinterpret_cast<void**>(&RL_GetPathOfRunningExecutable);
+        auto** function = reinterpret_cast<void**>(&RL_GetPathOfRunningExecutable);
 
         // clang-format off
-        if (OSDynLoad_FindExport(module, OS_DYNLOAD_EXPORT_FUNC, name, ptrFunction) == OS_DYNLOAD_OK)
+        if (OSDynLoad_FindExport(module, OS_DYNLOAD_EXPORT_FUNC, name, function) == OS_DYNLOAD_OK)
         {
             if (RL_GetPathOfRunningExecutable(path, sizeof(path)) == success)
                 return path;
         }
         // clang-format on
     }
+
     return std::string {};
 #else
-    return origin;
+    return argv0;
 #endif
 }
 
@@ -120,8 +123,8 @@ namespace love
 
         if (!PHYSFS_init(this->executablePath.c_str()))
         {
-            throw love::Exception("Failed to initialize filesystem: {:s}",
-                                  Filesystem::getLastError());
+            const char* error = this->getLastError();
+            throw love::Exception("Failed to initialize filesystem: {:s}", error);
         }
 
         this->setSymlinksEnabled(true);
@@ -152,27 +155,28 @@ namespace love
         if (identity == nullptr || strlen(identity) == 0)
             return false;
 
-        for (auto& path : appCommonPaths)
+        for (CommonPath path : appCommonPaths)
         {
             if (!this->commonPathMountInfo[path].mounted)
                 continue;
 
             std::string fullpath = this->getFullCommonPath(path);
+
             if (!fullpath.empty() && !PHYSFS_canUnmount(fullpath.c_str()))
                 return false;
         }
 
-        std::array<bool, COMMONPATH_MAX_ENUM> oldPaths { false };
+        bool oldMountedCommonPaths[COMMONPATH_MAX_ENUM] = { false };
 
-        for (auto path : appCommonPaths)
+        for (CommonPath path : appCommonPaths)
         {
-            oldPaths[path] = this->commonPathMountInfo[path].mounted;
+            oldMountedCommonPaths[path] = this->commonPathMountInfo[path].mounted;
 
             if (commonPathMountInfo[path].mounted)
                 this->unmount(path);
         }
 
-        for (auto path : appCommonPaths)
+        for (CommonPath path : appCommonPaths)
             this->fullPaths[path].clear();
 
         this->saveIdentity         = std::string(identity);
@@ -182,9 +186,9 @@ namespace love
         if (!this->mountCommonPathInternal(COMMONPATH_APP_SAVEDIR, nullptr, MOUNT_PERMISSIONS_READWRITE, appendToPath, false))
             this->saveDirectoryNeedsMounting = true;
 
-        for (auto path : appCommonPaths)
+        for (CommonPath path : appCommonPaths)
         {
-            if (oldPaths[path] && path != COMMONPATH_APP_SAVEDIR)
+            if (oldMountedCommonPaths[path] && path != COMMONPATH_APP_SAVEDIR)
             {
                 auto info = this->commonPathMountInfo[path];
                 this->mountCommonPathInternal(path, info.mountPoint.c_str(), info.permissions, appendToPath, true);
@@ -208,10 +212,11 @@ namespace love
         if (!this->source.empty())
             return false;
 
-        if (!PHYSFS_mount(source, nullptr, 1))
+        std::string searchPath = source;
+        if (!PHYSFS_mount(searchPath.c_str(), nullptr, 1))
             return false;
 
-        this->source = source;
+        this->source = searchPath;
 
         return true;
     }
@@ -423,7 +428,10 @@ namespace love
     std::string Filesystem::getFullCommonPath(CommonPath path)
     {
         if (!this->fullPaths[path].empty())
+        {
+            LOG("Returning cached path for {}", this->fullPaths[path])
             return this->fullPaths[path];
+        }
 
         if (isAppCommonPath(path))
         {
@@ -435,15 +443,11 @@ namespace love
             switch (path)
             {
                 case COMMONPATH_APP_SAVEDIR:
-                {
                     root = this->getFullCommonPath(COMMONPATH_USER_APPDATA);
                     break;
-                }
                 case COMMONPATH_APP_DOCUMENTS:
-                {
                     root = this->getFullCommonPath(COMMONPATH_USER_DOCUMENTS);
                     break;
-                }
                 default:
                     break;
             }
@@ -459,6 +463,7 @@ namespace love
                 suffix = (PATH_SEPARATOR APPDATA_FOLDER PATH_SEPARATOR) + this->saveIdentity;
 
             this->fullPaths[path] = normalize(root + suffix);
+
             return this->fullPaths[path];
         }
 
@@ -468,10 +473,8 @@ namespace love
             case COMMONPATH_APP_DOCUMENTS:
                 break;
             case COMMONPATH_USER_HOME:
-            {
                 this->fullPaths[path] = normalize(PHYSFS_getUserDir());
                 break;
-            }
             case COMMONPATH_USER_APPDATA:
             {
                 std::string fullpath {};
@@ -482,19 +485,16 @@ namespace love
                     fullpath = PHYSFS_getUserDir();
 
                 this->fullPaths[path] = normalize(fullpath + "/save/");
+                LOG("Returning path for {}", this->fullPaths[path])
 
                 break;
             }
             case COMMONPATH_USER_DOCUMENTS:
-            {
                 this->fullPaths[path] = normalize(PHYSFS_getUserDir());
                 break;
-            }
             case COMMONPATH_USER_DESKTOP:
-            {
                 this->fullPaths[path] = normalize(this->getUserDirectory());
                 break;
-            }
             case COMMONPATH_MAX_ENUM:
             default:
                 break;

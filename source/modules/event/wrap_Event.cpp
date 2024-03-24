@@ -162,7 +162,7 @@ int Wrap_Event::open(lua_State* L)
     module.name      = "event";
     module.type      = &Module::type;
     module.functions = functions;
-    module.types     = nullptr;
+    module.types     = {};
 
     int result = luax_register_module(L, module);
 

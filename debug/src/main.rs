@@ -42,5 +42,5 @@ fn main() {
             eprintln!("Unsupported operating system: {}", os);
             return;
         }
-    };
+    }
 }

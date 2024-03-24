@@ -251,11 +251,11 @@ int love_openConsole(lua_State* L)
         return 1;
     }
 
-    {
-        SEND(sockfd, "HTTP/1.1 200 OK\r\n");
-        SEND(sockfd, "Content-Type: text/plain; charset=utf-8\r\n");
-        SEND(sockfd, "\r\n");
-    }
+    // {
+    //     SEND(sockfd, "HTTP/1.1 200 OK\r\n");
+    //     SEND(sockfd, "Content-Type: text/plain; charset=utf-8\r\n");
+    //     SEND(sockfd, "\r\n");
+    // }
 
     std::fflush(stdout);
     dup2(sockfd, STDOUT_FILENO);

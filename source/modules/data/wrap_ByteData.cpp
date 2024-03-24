@@ -34,7 +34,7 @@ int Wrap_ByteData::setString(lua_State* L)
     if (offset < 0 || offset + (int64_t)size > (int64_t)self->getSize())
         return luaL_error(L, E_INVALID_OFFSET_AND_SIZE);
 
-    std::copy_n((char*)string, size, (char*)self->getData() + (size_t)offset);
+    std::memcpy((char*)self->getData() + (size_t)offset, string, size);
 
     return 0;
 }

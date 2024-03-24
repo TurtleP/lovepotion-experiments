@@ -397,8 +397,7 @@ static constexpr lua_CFunction types[] =
     love::open_data,
     love::open_bytedata,
     love::open_dataview,
-    love::open_compresseddata,
-    nullptr
+    love::open_compresseddata
 };
 // clang-format on
 

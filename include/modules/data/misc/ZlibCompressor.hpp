@@ -12,10 +12,9 @@ namespace love
     class ZlibCompressor : public Compressor
     {
       private:
-        uLong zlibCompressBound(Format format, uLong sourceLength)
+        uLong zlibCompressBound(Format format, uLong sourceLen)
         {
-            uLong size = sourceLength + (sourceLength >> 12) + (sourceLength >> 14) +
-                         (sourceLength >> 25) + 13;
+            uLong size = sourceLen + (sourceLen >> 12) + (sourceLen >> 14) + (sourceLen >> 25) + 13;
 
             if (format == FORMAT_GZIP)
                 size += 18 - 6;
@@ -118,9 +117,9 @@ namespace love
                 throw love::Exception(E_OUT_OF_MEMORY);
             }
 
-            uLongf destinationLength = (uLongf)maxSize;
-            int status = zlibCompress(format, (Bytef*)compressedBytes, &destinationLength,
-                                      (const Bytef*)data, (uLong)dataSize, level);
+            uLongf dstLength = (uLongf)maxSize;
+            int status       = zlibCompress(format, (Bytef*)compressedBytes, &dstLength,
+                                            (const Bytef*)data, (uLong)dataSize, level);
 
             if (status != Z_OK)
             {
@@ -128,19 +127,19 @@ namespace love
                 throw love::Exception("Could not zlib/gzip-compress data.");
             }
 
-            if ((double)maxSize / (double)destinationLength >= 1.3)
+            if ((double)maxSize / (double)dstLength >= 1.3)
             {
-                char* bytes = new (std::nothrow) char[destinationLength];
+                char* bytes = new (std::nothrow) char[dstLength];
 
                 if (bytes)
                 {
-                    std::memcpy(bytes, compressedBytes, destinationLength);
+                    std::memcpy(bytes, compressedBytes, dstLength);
                     delete[] compressedBytes;
                     compressedBytes = bytes;
                 }
             }
 
-            compressedSize = (size_t)destinationLength;
+            compressedSize = (size_t)dstLength;
             return compressedBytes;
         }
 
@@ -164,13 +163,13 @@ namespace love
                     throw love::Exception(E_OUT_OF_MEMORY);
                 }
 
-                uLongf destinationLength = (uLongf)rawSize;
-                int status = zlibDecompress(format, (Bytef*)rawBytes, &destinationLength,
-                                            (const Bytef*)data, (uLong)dataSize);
+                uLongf dstLength = (uLongf)rawSize;
+                int status       = zlibDecompress(format, (Bytef*)rawBytes, &dstLength,
+                                                  (const Bytef*)data, (uLong)dataSize);
 
                 if (status == Z_OK)
                 {
-                    decompressedSize = (size_t)destinationLength;
+                    decompressedSize = (size_t)dstLength;
                     break;
                 }
                 else if (status != Z_BUF_ERROR)
@@ -182,6 +181,7 @@ namespace love
                 delete[] rawBytes;
                 rawSize *= 2;
             }
+
             return rawBytes;
         }
 

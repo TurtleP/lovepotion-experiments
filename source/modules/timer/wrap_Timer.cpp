@@ -61,7 +61,7 @@ static constexpr luaL_Reg functions[] =
 
 int Wrap_Timer::open(lua_State* L)
 {
-    Timer* instance = instance();
+    auto* instance = instance();
 
     if (instance == nullptr)
         luax_catchexcept(L, [&]() { instance = new Timer(); });
@@ -73,7 +73,7 @@ int Wrap_Timer::open(lua_State* L)
     module.name      = "timer";
     module.type      = &Module::type;
     module.functions = functions;
-    module.types     = nullptr;
+    module.types     = {};
 
     return luax_register_module(L, module);
 }

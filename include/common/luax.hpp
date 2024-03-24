@@ -44,7 +44,7 @@ namespace love
         const char* name;
         Type* type;
         std::span<const luaL_Reg> functions;
-        const lua_CFunction* types;
+        std::span<const lua_CFunction> types;
     };
 
     static constexpr uint64_t LUAX_MAX_OBJECT_KEY = 0x20000000000000ULL;
@@ -220,6 +220,16 @@ namespace love
     Variant luax_checkvariant(lua_State* L, int index, bool allowuserdata = true,
                               std::set<const void*>* tableSet = nullptr);
 
+    int luax_convobj(lua_State* L, int index, const char* module, const char* function);
+
+    int luax_convobj(lua_State* L, const int indices[], int argc, const char* module,
+                     const char* function);
+
+    int luax_convobj(lua_State* L, const std::vector<int>& indices, const char* module,
+                     const char* function);
+
+    int luax_getfunction(lua_State* L, const char* module, const char* name);
+
     // #endregion
 
     // #region Registry
@@ -240,6 +250,8 @@ namespace love
 
         return 0;
     }
+
+    void luax_register_types(lua_State* L, std::span<const lua_CFunction> types);
 
     void luax_rawnewtype(lua_State* L, Type& type, Object* object);
 

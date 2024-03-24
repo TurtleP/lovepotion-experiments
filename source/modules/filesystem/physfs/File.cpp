@@ -18,10 +18,8 @@ namespace love
 
     File::File(std::string_view filename, Mode mode) : FileBase(filename), file(nullptr)
     {
-        LOG("Opening file {} with mode {}", filename, (int)mode)
         if (!this->open(mode))
             throw love::Exception(E_COULD_NOT_OPEN_FILE, filename);
-        LOG("File opened successfully")
     }
 
     File::File(const File& other) : FileBase(other), file(nullptr)

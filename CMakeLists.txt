@@ -42,9 +42,7 @@ message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message(STATUS "COMPILE_OPTIMIZATION: ${COMPILE_OPTIMIZATION}")
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall -Wno-psabi -Wextra
-    ${COMPILE_OPTIMIZATION}
-
+    -Wall -Wno-psabi -Wextra ${COMPILE_OPTIMIZATION}
     $<$<COMPILE_LANGUAGE:CXX>:-fexceptions -fno-rtti>
 )
 
@@ -61,23 +59,20 @@ if(NINTENDO_3DS)
         set(APP_ICON platform/ctr/icon-dev.png)
     endif()
 
-    # Generate a SMDH file for the executable
     ctr_generate_smdh(${PROJECT_NAME}.smdh
         NAME        "${APP_TITLE}"
-
-        # Other options available:
         DESCRIPTION "LÖVE for 3DS • ${APP_VERSION}"
         AUTHOR      "${APP_AUTHOR}"
         ICON        ${APP_ICON}
     )
 
-    # Specify that the executable is a 3DSX file
     ctr_create_3dsx(${PROJECT_NAME}
         SMDH  ${PROJECT_NAME}.smdh
         ROMFS ${PROJECT_NAME}_ctr_romfs
     )
 
     set(APP_LIBS citro3d)
+    set(OUTPUT_FILENAME "${PROJECT_NAME}.3dsx")
 endif()
 
 if (NINTENDO_SWITCH)
@@ -86,6 +81,8 @@ if (NINTENDO_SWITCH)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
         __CONSOLE__="Switch" __OS__="Horizon"
     )
+
+    set(OUTPUT_FILENAME "${PROJECT_NAME}.nro")
 endif()
 
 if (NINTENDO_WII_U)
@@ -94,7 +91,17 @@ if (NINTENDO_WII_U)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
         __CONSOLE__="Wii U" __OS__="Cafe" __LOVE_BIG_ENDIAN__
     )
+
+    set(OUTPUT_FILENAME "${PROJECT_NAME}.wuhb")
 endif()
+
+add_custom_target(test
+    DEPENDS           "${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_FILENAME}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+    COMMAND           ${CMAKE_COMMAND} -E tar -cvf "game.zip" --format=zip .
+    COMMAND           ${CMAKE_COMMAND} -E cat "${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_FILENAME}" "game.zip" > "${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_FILENAME}"
+    COMMAND           ${CMAKE_COMMAND} -E rm "game.zip"
+)
 
 # find PkgConfig for liblz4, libmpg123
 find_package(PkgConfig REQUIRED)

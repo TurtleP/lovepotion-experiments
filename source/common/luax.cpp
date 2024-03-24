@@ -125,10 +125,8 @@ namespace love
             case REGISTRY_MODULES:
                 return luax_getlove(L, MODULES_REGISTRY_KEY);
             case REGISTRY_OBJECTS:
-            {
                 lua_getfield(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
                 return 1;
-            }
             default:
                 return luaL_error(L, "Attempted to use invalid registry.");
         }
@@ -224,7 +222,7 @@ namespace love
             lua_pop(L, 1);
         }
 
-        lua_pushboolean(L, object != nullptr);
+        luax_pushboolean(L, object != nullptr);
 
         return 1;
     }
@@ -585,7 +583,7 @@ namespace love
 
     bool luax_optboolean(lua_State* L, int index, bool default_value)
     {
-        if (lua_isboolean(L, index))
+        if (lua_isboolean(L, index) == 1)
             return (lua_toboolean(L, index) == 1 ? true : false);
 
         return default_value;
@@ -726,11 +724,8 @@ namespace love
         if (!module.functions.empty())
             luax_register_type_inner(L, module.functions);
 
-        if (module.types != nullptr)
-        {
-            for (const auto* func = module.types; *func != nullptr; func++)
-                (*func)(L);
-        }
+        if (!module.types.empty())
+            luax_register_types(L, module.types);
 
         lua_pushvalue(L, -1);
         lua_setfield(L, -3, module.name);
@@ -751,10 +746,12 @@ namespace love
             lua_replace(L, -2);
 
             lua_newtable(L);
+
             lua_pushliteral(L, "v");
             lua_setfield(L, -2, "__mode");
 
             lua_setmetatable(L, -2);
+
             lua_setfield(L, LUA_REGISTRYINDEX, OBJECTS_REGISTRY_KEY);
         }
         else
@@ -793,6 +790,12 @@ namespace love
             lua_pushcfunction(L, registry.func);
             lua_setfield(L, -2, registry.name);
         }
+    }
+
+    void luax_register_types(lua_State* L, std::span<const lua_CFunction> types)
+    {
+        for (const auto& registry : types)
+            registry(L);
     }
 
     // #endregion

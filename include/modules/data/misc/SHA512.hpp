@@ -62,7 +62,7 @@ namespace love
             else
                 std::memcpy(intermediates, initial512, sizeof(intermediates));
 
-            uint64_t paddedLength = extend_multiple(length + 1 + 8, 128);
+            uint64_t paddedLength = extend_multiple(length + 1 + 16, 128);
             uint64_t* padded      = new uint64_t[paddedLength / 8];
 
             std::memcpy(padded, input, length);
@@ -94,6 +94,7 @@ namespace love
                     c[6]    = (chunk[j] >> 8) & 0xFF;
                     c[7]    = (chunk[j] >> 0) & 0xFF;
                 }
+
                 // clang-format off
                 for (int j = 16; j < 80; ++j)
                 {

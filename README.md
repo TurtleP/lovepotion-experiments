@@ -6,7 +6,13 @@ You can find the API reference and how to start making your own games [on the Wi
 
 # Testing
 
-To test LÖVE Potion, simply [use this repository](https://github.com/ellraiser/love-test) as your game content. Once done, you can run the application on your console and the tests will automatically run.
+To test LÖVE Potion, you must first intialize the submodules:
+
+```bash
+git submodule update --init
+```
+
+Then you can use the latest version from the [releases page](https://github.com/lovebrew/lovepotion/releases/latest) and use the submodule content as your game directory. Alternatively, making a fused game with the content is possible as well.
 
 ## Build Statuses
 

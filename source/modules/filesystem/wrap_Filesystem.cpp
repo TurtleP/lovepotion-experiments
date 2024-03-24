@@ -7,6 +7,8 @@
 #include "modules/filesystem/wrap_File.hpp"
 #include "modules/filesystem/wrap_FileData.hpp"
 
+#include "common/Console.hpp"
+
 #include <utility/logfile.hpp>
 
 using namespace love;
@@ -16,19 +18,31 @@ using namespace love;
 #include <algorithm>
 #include <string_view>
 
-static std::size_t replaceAll(std::string& inout, std::string_view what, std::string_view with)
+static void replaceAll(std::string& inout, std::string_view what, std::string_view with)
 {
-    std::size_t count          = 0;
     std::string::size_type pos = 0;
 
     while ((pos = inout.find(what, pos)) != std::string::npos)
     {
         inout.replace(pos, what.length(), with);
         pos += with.length();
-        ++count;
     }
+}
 
-    return count;
+static const char* translatePath(const char* input)
+{
+    if (!Console::is(Console::CTR))
+        return input;
+
+    static constexpr auto textures = { ".png", ".jpg", ".jpeg" };
+    static constexpr auto fonts    = { ".ttf", ".otf" };
+
+    auto path = std::filesystem::path(input);
+
+    if (std::find(textures.begin(), textures.end(), path.extension()) != textures.end())
+        return path.replace_extension(".t3x").c_str();
+    else if (std::find(fonts.begin(), fonts.end(), path.extension()) != fonts.end())
+        return path.replace_extension(".bcfnt").c_str();
 }
 
 int Wrap_Filesystem::init(lua_State* L)
@@ -299,6 +313,7 @@ int Wrap_Filesystem::getRealDirectory(lua_State* L)
     }
 
     luax_pushstring(L, directory);
+
     return 1;
 }
 
@@ -400,6 +415,7 @@ static int write_or_append(lua_State* L, File::Mode mode)
     }
 
     luax_pushboolean(L, true);
+
     return 1;
 }
 
@@ -421,6 +437,7 @@ int Wrap_Filesystem::getDirectoryItems(lua_State* L)
     instance()->getDirectoryItems(directory, items);
 
     lua_createtable(L, items.size(), 0);
+
     for (size_t i = 0; i < items.size(); i++)
     {
         lua_pushstring(L, items[i].c_str());
@@ -647,6 +664,7 @@ int Wrap_Filesystem::getRequirePath(lua_State* L)
     }
 
     luax_pushstring(L, path);
+
     return 1;
 }
 
@@ -688,6 +706,7 @@ int Wrap_Filesystem::getCRequirePath(lua_State* L)
     }
 
     luax_pushstring(L, path);
+
     return 1;
 }
 
@@ -857,17 +876,15 @@ namespace love
         return lua_isstring(L, index) || luax_istype(L, index, File::type);
     }
 
-    // clang-format off
     bool luax_cangetfiledata(lua_State* L, int index)
     {
-        return lua_isstring(L, index) || luax_istype(L, index, File::type) || luax_istype(L, index, FileData::type);
+        return luax_cangetfile(L, index) || luax_istype(L, index, FileData::type);
     }
 
     bool luax_cangetdata(lua_State* L, int index)
     {
-        return lua_isstring(L, index) || luax_istype(L, index, File::type) || luax_istype(L, index, Data::type);
+        return luax_cangetfile(L, index) || luax_istype(L, index, Data::type);
     }
-    // clang-format on
 } // namespace love
 
 // clang-format off
@@ -917,14 +934,13 @@ static constexpr luaL_Reg functions[]
 static constexpr lua_CFunction types[] =
 {
     love::open_file,
-    love::open_filedata,
-    nullptr
+    love::open_filedata
 };
 // clang-format on
 
 int Wrap_Filesystem::open(lua_State* L)
 {
-    Filesystem* instance = instance();
+    auto* instance = instance();
 
     if (instance == nullptr)
         luax_catchexcept(L, [&] { instance = new Filesystem(); });

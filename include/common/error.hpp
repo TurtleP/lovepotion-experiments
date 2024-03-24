@@ -17,7 +17,7 @@ namespace love
 #define E_FILE_NOT_OPEN_FOR_WRITING  "File not open for writing."
 #define E_INVALID_READ_SIZE          "Invalid read size."
 #define E_INVALID_WRITE_SIZE         "Invalid write size."
-#define E_NO_FILE_IN_LOVE_DIRS       "\n\tno '%s' in LOVE game directories."
+#define E_NO_FILE_IN_LOVE_DIRS       "\n\tno '{}' in LOVE game directories."
 // Audio
 #define E_AUDIO_NOT_INITIALIZED "Failed to initialize ndsp"
 // Data

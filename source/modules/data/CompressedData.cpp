@@ -26,7 +26,7 @@ namespace love
                 throw love::Exception(E_OUT_OF_MEMORY);
             }
 
-            std::copy_n(data, dataSize, this->data);
+            std::copy_n(data, this->dataSize, this->data);
         }
     }
 
