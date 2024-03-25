@@ -9,8 +9,6 @@
 
 #include "common/Console.hpp"
 
-#include <utility/logfile.hpp>
-
 using namespace love;
 
 #define instance() (Module::getInstance<Filesystem>(Module::M_FILESYSTEM))
@@ -29,7 +27,7 @@ static void replaceAll(std::string& inout, std::string_view what, std::string_vi
     }
 }
 
-static const char* translatePath(const char* input)
+static std::filesystem::path translatePath(const std::filesystem::path& input)
 {
     if (!Console::is(Console::CTR))
         return input;
@@ -39,10 +37,10 @@ static const char* translatePath(const char* input)
 
     auto path = std::filesystem::path(input);
 
-    if (std::find(textures.begin(), textures.end(), path.extension()) != textures.end())
-        return path.replace_extension(".t3x").c_str();
-    else if (std::find(fonts.begin(), fonts.end(), path.extension()) != fonts.end())
-        return path.replace_extension(".bcfnt").c_str();
+    if (std::find(textures.begin(), textures.end(), input.extension()) != textures.end())
+        return path.replace_extension(".t3x");
+    else if (std::find(fonts.begin(), fonts.end(), input.extension()) != fonts.end())
+        return path.replace_extension(".bcfnt");
 }
 
 int Wrap_Filesystem::init(lua_State* L)
@@ -472,7 +470,7 @@ int Wrap_Filesystem::lines(lua_State* L)
 int Wrap_Filesystem::exists(lua_State* L)
 {
     const char* filename = luaL_checkstring(L, 1);
-    lua_pushboolean(L, instance()->exists(filename));
+    luax_pushboolean(L, instance()->exists(filename));
 
     return 1;
 }
@@ -594,7 +592,7 @@ int Wrap_Filesystem::getInfo(lua_State* L)
 
 int Wrap_Filesystem::setSymlinksEnabled(lua_State* L)
 {
-    bool enable = luax_toboolean(L, 1);
+    bool enable = luax_checkboolean(L, 1);
     instance()->setSymlinksEnabled(enable);
 
     return 0;
@@ -734,7 +732,7 @@ int Wrap_Filesystem::setCRequirePath(lua_State* L)
 
 static int loader(lua_State* L)
 {
-    std::string moduleName = luaL_checkstring(L, 1);
+    std::string moduleName = luax_checkstring(L, 1);
 
     for (char& c : moduleName)
     {

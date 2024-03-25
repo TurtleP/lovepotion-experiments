@@ -12,10 +12,7 @@
 #define APPDATA_PREFIX ""
 #define PATH_SEPARATOR "/"
 
-#define normalize(x) std::string(std::filesystem::path((x)).lexically_normal())
 #define parentize(x) std::string(std::filesystem::path((x)).parent_path())
-
-#include "utility/logfile.hpp"
 
 /**
  * @brief Get the application path for the current console.
@@ -88,6 +85,24 @@ namespace love
             default:
                 return false;
         }
+    }
+
+    static std::string normalize(const std::string& input)
+    {
+        std::string output {};
+        bool seenSep = false, isSep = false;
+
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            isSep = (input[i] == PATH_SEPARATOR[0]);
+
+            if (!isSep || !seenSep)
+                output += input[i];
+
+            seenSep = isSep;
+        }
+
+        return output;
     }
 
     Filesystem::Filesystem() :
@@ -172,7 +187,7 @@ namespace love
         {
             oldMountedCommonPaths[path] = this->commonPathMountInfo[path].mounted;
 
-            if (commonPathMountInfo[path].mounted)
+            if (this->commonPathMountInfo[path].mounted)
                 this->unmount(path);
         }
 
@@ -268,6 +283,7 @@ namespace love
                 return false;
 
             const char* realDirectory = PHYSFS_getRealDir(archive);
+
             if (!realDirectory)
                 return false;
 
@@ -304,21 +320,22 @@ namespace love
 
         if (fullpath.empty())
             return false;
-
+        LOG("Checking folder creation for {} at {}", fullpath,
+            mountPoint == nullptr ? "/" : mountPoint)
         if (create && isAppCommonPath(path) && !this->isRealDirectory(fullpath))
         {
             if (!this->createRealDirectory(fullpath))
                 return false;
         }
-
+        LOG("Mounting {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
         if (this->mountFullPath(fullpath.c_str(), mountPoint, permissions, appendToPath))
         {
             std::string point               = mountPoint != nullptr ? mountPoint : "/";
             this->commonPathMountInfo[path] = { true, point, permissions };
-
+            LOG("Mounted {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
             return true;
         }
-
+        LOG("Failed to mount {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
         return false;
     }
 
@@ -334,12 +351,13 @@ namespace love
         if (!PHYSFS_isInit() || !archive)
             return false;
 
-        if (PHYSFS_mountMemory(data->getData(), data->getSize(), nullptr, archive, mountpoint,
-                               appendToPath) != 0)
+        // clang-format off
+        if (PHYSFS_mountMemory(data->getData(), data->getSize(), nullptr, archive, mountpoint, appendToPath) != 0)
         {
             this->mountedData[archive] = data;
             return true;
         }
+        // clang-format on
 
         return false;
     }
@@ -378,11 +396,14 @@ namespace love
         std::string realPath = realDirectory;
         realPath += PATH_SEPARATOR;
         realPath += archive;
+        LOG("Unmounting {}", realPath);
 
         if (PHYSFS_getMountPoint(realPath.c_str()) == nullptr)
             return false;
-
-        return PHYSFS_unmount(realPath.c_str()) != 0;
+        LOG("Attempting to unmount {}", realPath)
+        bool success = PHYSFS_unmount(realPath.c_str()) != 0;
+        LOG("Unmounted {}", realPath)
+        return success;
     }
 
     bool Filesystem::unmountFullPath(const char* fullpath)
@@ -390,7 +411,9 @@ namespace love
         if (!PHYSFS_isInit() || !fullpath)
             return false;
 
-        return PHYSFS_unmount(fullpath) != 0;
+        bool success = PHYSFS_unmount(fullpath) != 0;
+        LOG("Unmounting full path {}: {}", fullpath, success);
+        return success;
     }
 
     bool Filesystem::unmount(CommonPath path)
@@ -428,10 +451,7 @@ namespace love
     std::string Filesystem::getFullCommonPath(CommonPath path)
     {
         if (!this->fullPaths[path].empty())
-        {
-            LOG("Returning cached path for {}", this->fullPaths[path])
             return this->fullPaths[path];
-        }
 
         if (isAppCommonPath(path))
         {
@@ -458,9 +478,9 @@ namespace love
             std::string suffix {};
 
             if (this->isFused())
-                suffix = PATH_SEPARATOR + this->saveIdentity;
+                suffix = std::string(PATH_SEPARATOR);
             else
-                suffix = (PATH_SEPARATOR APPDATA_FOLDER PATH_SEPARATOR) + this->saveIdentity;
+                suffix = std::string(PATH_SEPARATOR) + this->saveIdentity;
 
             this->fullPaths[path] = normalize(root + suffix);
 
@@ -477,23 +497,22 @@ namespace love
                 break;
             case COMMONPATH_USER_APPDATA:
             {
-                std::string fullpath {};
+                std::string storagePath {};
 
                 if (Console::is(Console::CAFE))
-                    fullpath = parentize(this->executablePath);
+                    storagePath = parentize(this->executablePath);
                 else
-                    fullpath = PHYSFS_getUserDir();
+                    storagePath = PHYSFS_getUserDir();
 
-                this->fullPaths[path] = normalize(fullpath + "/save/");
-                LOG("Returning path for {}", this->fullPaths[path])
+                this->fullPaths[path] = normalize(storagePath + "/save/");
 
                 break;
             }
             case COMMONPATH_USER_DOCUMENTS:
-                this->fullPaths[path] = normalize(PHYSFS_getUserDir());
+                this->fullPaths[path] = normalize("sdmc:/");
                 break;
             case COMMONPATH_USER_DESKTOP:
-                this->fullPaths[path] = normalize(this->getUserDirectory());
+                this->fullPaths[path] = normalize(PHYSFS_getUserDir());
                 break;
             case COMMONPATH_MAX_ENUM:
             default:
@@ -675,7 +694,7 @@ namespace love
         if (!PHYSFS_isInit())
             return;
 
-        PHYSFS_permitSymbolicLinks(enable);
+        PHYSFS_permitSymbolicLinks(enable ? 1 : 0);
     }
 
     bool Filesystem::areSymlinksEnabled() const

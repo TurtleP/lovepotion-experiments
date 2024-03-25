@@ -308,7 +308,7 @@ int Wrap_File::lines(lua_State* L)
     lua_pushstring(L, "");
     lua_pushnumber(L, 0);
     lua_pushnumber(L, 0);
-    lua_pushboolean(L, self->getMode() != File::MODE_CLOSED);
+    luax_pushboolean(L, self->getMode() != File::MODE_CLOSED);
 
     if (self->getMode() != File::MODE_READ)
     {
