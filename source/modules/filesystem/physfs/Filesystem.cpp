@@ -63,8 +63,6 @@ static std::string getApplicationPath(std::string argv0)
 #endif
 }
 
-#include <utility/logfile.hpp>
-
 namespace love
 {
     // clang-format off
@@ -320,22 +318,21 @@ namespace love
 
         if (fullpath.empty())
             return false;
-        LOG("Checking folder creation for {} at {}", fullpath,
-            mountPoint == nullptr ? "/" : mountPoint)
+
         if (create && isAppCommonPath(path) && !this->isRealDirectory(fullpath))
         {
             if (!this->createRealDirectory(fullpath))
                 return false;
         }
-        LOG("Mounting {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
+
         if (this->mountFullPath(fullpath.c_str(), mountPoint, permissions, appendToPath))
         {
             std::string point               = mountPoint != nullptr ? mountPoint : "/";
             this->commonPathMountInfo[path] = { true, point, permissions };
-            LOG("Mounted {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
+
             return true;
         }
-        LOG("Failed to mount {} at {}", fullpath, mountPoint == nullptr ? "/" : mountPoint)
+
         return false;
     }
 
@@ -396,14 +393,11 @@ namespace love
         std::string realPath = realDirectory;
         realPath += PATH_SEPARATOR;
         realPath += archive;
-        LOG("Unmounting {}", realPath);
 
         if (PHYSFS_getMountPoint(realPath.c_str()) == nullptr)
             return false;
-        LOG("Attempting to unmount {}", realPath)
-        bool success = PHYSFS_unmount(realPath.c_str()) != 0;
-        LOG("Unmounted {}", realPath)
-        return success;
+
+        return PHYSFS_unmount(realPath.c_str()) != 0;
     }
 
     bool Filesystem::unmountFullPath(const char* fullpath)
@@ -411,9 +405,7 @@ namespace love
         if (!PHYSFS_isInit() || !fullpath)
             return false;
 
-        bool success = PHYSFS_unmount(fullpath) != 0;
-        LOG("Unmounting full path {}: {}", fullpath, success);
-        return success;
+        return PHYSFS_unmount(fullpath) != 0;
     }
 
     bool Filesystem::unmount(CommonPath path)
